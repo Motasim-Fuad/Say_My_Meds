@@ -1,0 +1,19 @@
+{
+  "configurations": [
+    {
+      "name": "Flutter (lib/main.dart)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart"
+<<<<<<< HEAD
+=======
+    },
+    {
+      "name": "Flutter (lib/main.dart)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart"
+>>>>>>> 47c23df (Initial commit)
+    }
+  ]
+}

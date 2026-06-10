@@ -1,17 +1,26 @@
+// lib/app/views/screens/medications/controler/check_info_controller/cheak_info_controller.dart
+
 import 'dart:async';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:saymymeds/app/core/consants/api_constants.dart';  // ✅ যোগ কর
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/material.dart';
+import 'package:saymymeds/app/core/consants/api_constants.dart';
 import 'package:saymymeds/app/utlies/storage_helper.dart';
 import 'package:saymymeds/app/views/screens/medications/controler/model/check_info_page_api_model.dart';
 
 class CheckInfoController extends GetxController {
-  // ✅ ApiConstants থেকে baseUrl নাও - double slash problem fix করে
   static String get baseUrl {
     String url = ApiConstants.baseUrl;
-    // শেষের slash remove কর
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    return url;
+  }
+
+  static String get apiCoreUrl {
+    String url = ApiConstants.baseUrl;
     if (url.endsWith('/')) {
       url = url.substring(0, url.length - 1);
     }
@@ -29,26 +38,34 @@ class CheckInfoController extends GetxController {
   final Rx<CheckInfoPageApiModel?> medicationDetails = Rx<CheckInfoPageApiModel?>(null);
   final RxString processedImageUrl = ''.obs;
   final RxBool isLoading = false.obs;
-  final RxBool isAudioLoading = false.obs;
   final RxBool isPlaying = false.obs;
   final RxString selectedLanguage = 'en'.obs;
   final RxString noteText = ''.obs;
-  final RxString currentAudioUrl = ''.obs;
   final RxString globalLanguageCode = 'en'.obs;
 
   final RxMap<String, String> translations = RxMap<String, String>({});
-  final AudioPlayer audioPlayer = AudioPlayer();
+
+  late final FlutterTts flutterTts;
   int medicationId = 0;
 
   final Map<String, String> languageCodes = {
     'English': 'en',
     'Spanish': 'es',
     'French': 'fr',
-    'Portugese': 'pt',
     'Portuguese': 'pt',
     'Creole': 'ht',
     'Chinese': 'zh-CN',
     'Russian': 'ru',
+  };
+
+  final Map<String, String> ttsLanguageMap = {
+    'en': 'en-US',
+    'es': 'es-ES',
+    'fr': 'fr-FR',
+    'pt': 'pt-PT',
+    'ht': 'ht',
+    'zh-CN': 'zh-CN',
+    'ru': 'ru-RU',
   };
 
   final Map<String, Map<String, String>> allTranslations = {
@@ -72,6 +89,7 @@ class CheckInfoController extends GetxController {
       'add_notes': 'Add notes',
       'save_note': 'Save Note',
       'play': 'Play',
+      'playing': 'Playing...',
     },
     'es': {
       'generic_name': 'Nombre Genérico',
@@ -93,6 +111,7 @@ class CheckInfoController extends GetxController {
       'add_notes': 'Agregar Notas',
       'save_note': 'Guardar Nota',
       'play': 'Reproducir',
+      'playing': 'Reproduciendo...',
     },
     'fr': {
       'generic_name': 'Nom Générique',
@@ -114,6 +133,7 @@ class CheckInfoController extends GetxController {
       'add_notes': 'Ajouter des Notes',
       'save_note': 'Enregistrer la Note',
       'play': 'Jouer',
+      'playing': 'En cours...',
     },
     'pt': {
       'generic_name': 'Nome Genérico',
@@ -135,6 +155,7 @@ class CheckInfoController extends GetxController {
       'add_notes': 'Adicionar Notas',
       'save_note': 'Salvar Nota',
       'play': 'Tocar',
+      'playing': 'Tocando...',
     },
     'ht': {
       'generic_name': 'Non Jenerik',
@@ -156,6 +177,7 @@ class CheckInfoController extends GetxController {
       'add_notes': 'Ajoute Nòt',
       'save_note': 'Anrejistre Nòt',
       'play': 'Jwe',
+      'playing': 'Ap jwe...',
     },
     'zh-CN': {
       'generic_name': '通用名称',
@@ -177,6 +199,7 @@ class CheckInfoController extends GetxController {
       'add_notes': '添加备注',
       'save_note': '保存备注',
       'play': '播放',
+      'playing': '播放中...',
     },
     'ru': {
       'generic_name': 'Общее Название',
@@ -198,29 +221,49 @@ class CheckInfoController extends GetxController {
       'add_notes': 'Добавить Заметки',
       'save_note': 'Сохранить Заметку',
       'play': 'Воспроизвести',
+      'playing': 'Воспроизведение...',
     },
   };
 
   @override
   void onInit() {
     super.onInit();
+    flutterTts = FlutterTts();
+    _setupTts();
     _loadTranslations();
-    _setupAudioListener();
     ever(globalLanguageCode, (_) {
       _syncLanguageFromGlobal();
     });
   }
 
-  void _setupAudioListener() {
-    audioPlayer.onPlayerStateChanged.listen((state) {
-      isPlaying.value = state == PlayerState.playing;
-      isAudioLoading.value = state == PlayerState.playing;
-      _logAudio('Audio state changed: $state');
+  void _setupTts() async {
+    await _setTtsLanguage();
+    await flutterTts.setSpeechRate(0.5);
+    await flutterTts.setPitch(1.0);
+
+    // ✅ Fixed: Correct way to set completion handler
+    flutterTts.setCompletionHandler(() {
+      print('TTS Completed');
+      isPlaying.value = false;
     });
 
-    audioPlayer.onPlayerComplete.listen((_) {
-      _logAudio('Audio playback completed');
+    // ✅ Fixed: Correct way to set error handler
+    flutterTts.setErrorHandler((msg) {
+      print('TTS Error: $msg');
+      isPlaying.value = false;
+      _showSnackbar('Error', 'Failed to speak: $msg');
     });
+
+    // ✅ Optional: Start handler
+    flutterTts.setStartHandler(() {
+      print('TTS Started');
+    });
+  }
+
+  Future<void> _setTtsLanguage() async {
+    String ttsLang = ttsLanguageMap[selectedLanguage.value] ?? 'en-US';
+    var result = await flutterTts.setLanguage(ttsLang);
+    print('TTS Language set to: $ttsLang, result: $result');
   }
 
   void _syncLanguageFromGlobal() {
@@ -228,16 +271,16 @@ class CheckInfoController extends GetxController {
     if (selectedLanguage.value != newLang) {
       selectedLanguage.value = newLang;
       _loadTranslations();
+      _setTtsLanguage();
       if (medicationId > 0) {
         fetchMedicationDetails(medicationId);
       }
-      print('✅ CheckInfo: Language synced to $newLang');
     }
   }
 
   @override
   void onClose() {
-    audioPlayer.dispose();
+    flutterTts.stop();
     super.onClose();
   }
 
@@ -275,18 +318,16 @@ class CheckInfoController extends GetxController {
         return;
       }
 
-      print('🌐 Fetching medication details for ID: $id');
-      print('🌐 URL: $baseUrl/medications/$id/?lang=${selectedLanguage.value}');
+      final url = '$apiCoreUrl/medications/$id/?lang=${selectedLanguage.value}';
+      print('🌐 Fetching from: $url');
 
       final response = await http.get(
-        Uri.parse('$baseUrl/medications/$id/?lang=${selectedLanguage.value}'),
+        Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
-
-      print('📥 Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -299,44 +340,22 @@ class CheckInfoController extends GetxController {
           try {
             final apiTranslations = Map<String, String>.from(data['translations'] as Map);
             translations.value = apiTranslations;
-            _logDebug('✅ Translations loaded from API: ${translations.length} keys');
           } catch (e) {
-            _logDebug('⚠️ Error parsing API translations: $e');
             _loadTranslations();
           }
         } else {
           _loadTranslations();
-          _logDebug('ℹ️ Using local translations');
         }
 
-        _logDebug('✅ Medication details loaded (Lang: ${selectedLanguage.value})');
-        _logDebug('🖼️ Image URL: ${processedImageUrl.value}');
-        _debugAudioUrls();
+        print('✅ Medication loaded: ${model.genericName}');
       } else {
-        _showSnackbar('Error', 'Failed to load details: ${response.statusCode}');
-        _logDebug('API Error ${response.statusCode}: ${response.body}');
+        _showSnackbar('Error', 'Failed to load details');
       }
     } catch (e) {
       _showSnackbar('Error', 'Failed to fetch details: $e');
-      _logDebug('Error fetching details: $e');
     } finally {
       isLoading.value = false;
     }
-  }
-
-  void _debugAudioUrls() {
-    final details = medicationDetails.value;
-    if (details == null) return;
-
-    _logAudio('📋 Available Audio URLs:');
-    _logAudio('EN: ${details.audioUrls.en}');
-    _logAudio('ES: ${details.audioUrls.es}');
-    _logAudio('FR: ${details.audioUrls.fr}');
-    _logAudio('PT: ${details.audioUrls.pt}');
-    _logAudio('HT: ${details.audioUrls.ht}');
-    _logAudio('ZH-CN: ${details.audioUrls.zhCn}');
-    _logAudio('RU: ${details.audioUrls.ru}');
-    _logAudio('Direct: ${details.audioDirectUrl}');
   }
 
   Future<void> changeLanguage(String displayLang) async {
@@ -345,160 +364,65 @@ class CheckInfoController extends GetxController {
 
     selectedLanguage.value = langCode;
     _loadTranslations();
+    await _setTtsLanguage();
 
     if (medicationId > 0) {
       await fetchMedicationDetails(medicationId);
     }
-    print('✅ CheckInfo language changed to: $displayLang ($langCode)');
   }
 
   void updateGlobalLanguage(String langCode) {
     globalLanguageCode.value = langCode;
   }
 
-  Future<void> toggleAudio() async {
-    try {
-      if (isPlaying.value) {
-        await audioPlayer.pause();
-        isAudioLoading.value = false;
-      } else {
-        await _playAudio();
-      }
-    } catch (e) {
-      isAudioLoading.value = false;
-      _showSnackbar('Error', 'Failed to play audio: $e');
-      _logAudio('Error playing audio: $e');
-    }
-  }
-
-  Future<void> _playAudio() async {
-    final audioUrl = getAudioUrlForLanguage();
-    _logAudio('🎵 Audio URL for ${selectedLanguage.value}: $audioUrl');
-
-    if (audioUrl.isEmpty) {
-      _showSnackbar('Error', 'Audio not available for this language');
-      return;
-    }
-
-    final token = await StorageHelper.getToken();
-    if (token == null) {
-      _showSnackbar('Error', 'No authentication token found');
-      return;
-    }
-
-    isAudioLoading.value = true;
-    currentAudioUrl.value = audioUrl;
-
-    try {
-      _logAudio('📡 Requesting audio from: $audioUrl');
-
-      final response = await http.get(
-        Uri.parse(audioUrl),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      _logAudio('📊 Audio response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final bytes = response.bodyBytes;
-        _logAudio('✅ Audio bytes received: ${bytes.length}');
-        await audioPlayer.play(BytesSource(bytes));
-        _logAudio('▶️ Audio playback started');
-        isAudioLoading.value = false;
-      } else {
-        isAudioLoading.value = false;
-        _showSnackbar('Error', 'Failed to load audio: ${response.statusCode}');
-      }
-    } catch (e) {
-      isAudioLoading.value = false;
-      _logAudio('❌ Exception: $e');
-      _showSnackbar('Error', 'Failed to play audio: $e');
-    }
-  }
-
-  String getAudioUrlForLanguage() {
+  String _getTextToSpeak() {
     final details = medicationDetails.value;
     if (details == null) return '';
 
-    String? url;
-    switch (selectedLanguage.value) {
-      case 'en':
-        url = details.audioUrls.en;
-        break;
-      case 'es':
-        url = details.audioUrls.es;
-        break;
-      case 'fr':
-        url = details.audioUrls.fr;
-        break;
-      case 'pt':
-        url = details.audioUrls.pt;
-        break;
-      case 'ht':
-        url = details.audioUrls.ht;
-        break;
-      case 'zh-CN':
-        url = details.audioUrls.zhCn;
-        break;
-      case 'ru':
-        url = details.audioUrls.ru;
-        break;
-      default:
-        url = details.audioDirectUrl;
-    }
+    final text = '''
+      ${getTranslation('generic_name')}: ${details.genericName}. 
+      ${getTranslation('brand_name')}: ${details.brandName}. 
+      ${getTranslation('manufacturer')}: ${details.manufacturer}. 
+      ${getTranslation('drug_class')}: ${details.drugClass}. 
+      ${getTranslation('uses')}: ${details.uses}. 
+      ${getTranslation('dosage_information')}: 
+        ${getTranslation('adults')}: ${details.dosageInformation.adultsDosage}. 
+        ${getTranslation('children')}: ${details.dosageInformation.childrenDosage}. 
+        ${getTranslation('elderly')}: ${details.dosageInformation.elderlyDosage}. 
+      ${getTranslation('how_to_take')}: ${details.howToTake}. 
+      ${getTranslation('side_effects')}: 
+        ${getTranslation('common')}: ${details.sideEffects.common}. 
+        ${getTranslation('serious')}: ${details.sideEffects.serious}. 
+      ${getTranslation('warnings')}: ${details.warnings}. 
+      ${getTranslation('storage_instructions')}: ${details.storageInstructions}. 
+      ${getTranslation('interactions')}: ${details.interactions}.
+    ''';
 
-    if (url == null || url.isEmpty) {
-      _logAudio('⚠️ No URL found for language: ${selectedLanguage.value}');
-      return '';
-    }
-
-    return _normalizeAudioUrl(url);
+    return text;
   }
 
-  String _normalizeAudioUrl(String url) {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    if (url.startsWith('/api')) {
-      return '$mediaBaseUrl$url';
-    }
-    if (url.startsWith('/')) {
-      return '$mediaBaseUrl$url';
-    }
-    return '$mediaBaseUrl/api/core/$url';
-  }
-
-  Future<void> saveNote(int noteId) async {
+  Future<void> toggleAudio() async {
     try {
-      if (noteText.value.isEmpty) {
-        _showSnackbar('Warning', 'Please enter a note');
+      if (isPlaying.value) {
+        await flutterTts.stop();
+        isPlaying.value = false;
         return;
       }
 
-      final token = await StorageHelper.getToken();
-      if (token == null) {
-        _showSnackbar('Error', 'No authentication token found');
+      final textToSpeak = _getTextToSpeak();
+      if (textToSpeak.isEmpty) {
+        _showSnackbar('Error', 'No content to speak');
         return;
       }
 
-      final response = await http.patch(
-        Uri.parse('$baseUrl/notes/$noteId/'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({'note': noteText.value, 'medication': medicationId}),
-      );
+      print('🔊 Speaking...');
+      isPlaying.value = true;
+      await flutterTts.speak(textToSpeak);
 
-      if (response.statusCode == 200) {
-        _showSnackbar('Success', 'Note saved successfully');
-        noteText.value = '';
-      } else {
-        _showSnackbar('Error', 'Failed to save note: ${response.statusCode}');
-      }
     } catch (e) {
-      _showSnackbar('Error', 'Failed to save note: $e');
-      _logDebug('Error saving note: $e');
+      print('❌ TTS error: $e');
+      isPlaying.value = false;
+      _showSnackbar('Error', 'Failed to speak: $e');
     }
   }
 
@@ -516,12 +440,15 @@ class CheckInfoController extends GetxController {
       }
 
       final response = await http.post(
-        Uri.parse('$baseUrl/notes/'),
+        Uri.parse('$apiCoreUrl/notes/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: json.encode({'note': noteText.value, 'medication': medicationId}),
+        body: json.encode({
+          'note': noteText.value,
+          'medication': medicationId
+        }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -529,29 +456,23 @@ class CheckInfoController extends GetxController {
         noteText.value = '';
         await fetchMedicationDetails(medicationId);
       } else {
-        _showSnackbar('Error', 'Failed to add note: ${response.statusCode}');
+        _showSnackbar('Error', 'Failed to add note');
       }
     } catch (e) {
       _showSnackbar('Error', 'Failed to add note: $e');
-      _logDebug('Error adding note: $e');
     }
   }
 
   void _showSnackbar(String title, String message) {
-    Future.microtask(() {
-      if (Get.context != null) {
-        Get.snackbar(title, message);
-      } else {
-        _logDebug('$title: $message');
-      }
-    });
-  }
-
-  void _logDebug(String message) {
-    print('🔍 [CheckInfo] $message');
-  }
-
-  void _logAudio(String message) {
-    print('🔊 [Audio] $message');
+    if (Get.context != null) {
+      Get.snackbar(
+        title,
+        message,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 3),
+        backgroundColor: title == 'Error' ? Colors.redAccent : Colors.green,
+        colorText: Colors.white,
+      );
+    }
   }
 }

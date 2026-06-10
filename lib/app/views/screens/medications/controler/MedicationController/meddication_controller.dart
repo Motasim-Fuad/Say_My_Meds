@@ -1,6 +1,8 @@
-import 'package:audioplayers/audioplayers.dart';
+// lib/app/views/screens/medications/controler/MedicationController/meddication_controller.dart
+
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:saymymeds/app/core/consants/api_constants.dart';
 import 'package:saymymeds/app/utlies/storage_helper.dart';
 import 'dart:convert';
@@ -21,25 +23,34 @@ class MedicationController extends GetxController {
   final errorMessage = ''.obs;
   final globalLanguageCode = 'en'.obs;
 
-  late final AudioPlayer audioPlayer;
+  late final FlutterTts flutterTts;
   String authToken = '';
 
   final Map<String, String> languageCodes = {
     'English': 'en',
     'Spanish': 'es',
     'French': 'fr',
-    'Portugese': 'pt',
     'Portuguese': 'pt',
     'Creole': 'ht',
     'Chinese': 'zh-CN',
     'Russian': 'ru',
   };
 
+  final Map<String, String> ttsLanguageMap = {
+    'en': 'en-US',
+    'es': 'es-ES',
+    'fr': 'fr-FR',
+    'pt': 'pt-PT',
+    'ht': 'ht',
+    'zh-CN': 'zh-CN',
+    'ru': 'ru-RU',
+  };
+
   @override
   void onInit() {
     super.onInit();
-    audioPlayer = AudioPlayer();
-    _setupAudioListeners();
+    flutterTts = FlutterTts();
+    _setupTts();
 
     ever(globalLanguageCode, (_) {
       _syncLanguageFromGlobal();
@@ -48,61 +59,50 @@ class MedicationController extends GetxController {
     fetchMedications();
   }
 
-  void _setupAudioListeners() {
-    audioPlayer.onPlayerStateChanged.listen((state) {
-      isPlaying.value = state == PlayerState.playing;
+  void _setupTts() async {
+    await _setTtsLanguage();
+    await flutterTts.setSpeechRate(0.5);
+    await flutterTts.setPitch(1.0);
+
+    flutterTts.setCompletionHandler(() {
+      isPlaying.value = false;
     });
 
-    audioPlayer.onPlayerComplete.listen((_) {
+    flutterTts.setErrorHandler((msg) {
+      print('TTS Error: $msg');
       isPlaying.value = false;
     });
   }
 
+  Future<void> _setTtsLanguage() async {
+    String ttsLang = ttsLanguageMap[selectedLanguage.value] ?? 'en-US';
+    await flutterTts.setLanguage(ttsLang);
+  }
+
   void _syncLanguageFromGlobal() {
     final newLang = globalLanguageCode.value;
-
     if (selectedLanguage.value != newLang) {
       selectedLanguage.value = newLang;
       languageCode.value = newLang;
+      _setTtsLanguage();
       fetchMedications();
-      print('Medication: Language synced to $newLang');
     }
   }
 
   @override
   void onClose() {
-    audioPlayer.dispose();
+    flutterTts.stop();
     super.onClose();
   }
 
-  void setAuthToken(String token) {
-    authToken = token;
-  }
-
   String _buildImageUrl(String? imagePath) {
-    if (imagePath == null || imagePath.isEmpty) {
-      print('DEBUG: Image path is null or empty');
-      return '';
-    }
-
+    if (imagePath == null || imagePath.isEmpty) return '';
     final trimmedPath = imagePath.trim();
-    print('DEBUG: Original image path: $trimmedPath');
-
-    // Check if it's already a complete URL
-    if (trimmedPath.startsWith('http://') ||
-        trimmedPath.startsWith('https://')) {
-      print('DEBUG: Already complete URL: $trimmedPath');
+    if (trimmedPath.startsWith('http://') || trimmedPath.startsWith('https://')) {
       return trimmedPath;
     }
-
-    // Build the complete URL
-    final cleanPath = trimmedPath.startsWith('/')
-        ? trimmedPath
-        : '/$trimmedPath';
-
-    final completeUrl = '$mediaBaseUrlForImages$cleanPath';
-    print('DEBUG: Built complete URL: $completeUrl');
-    return completeUrl;
+    final cleanPath = trimmedPath.startsWith('/') ? trimmedPath : '/$trimmedPath';
+    return '$mediaBaseUrlForImages$cleanPath';
   }
 
   Future<void> fetchMedications() async {
@@ -113,61 +113,33 @@ class MedicationController extends GetxController {
       final token = await StorageHelper.getToken();
       if (token == null) {
         errorMessage.value = 'No authentication token found';
-        print('DEBUG: No auth token found');
         return;
       }
 
       final url = '$baseUrl/medications/?lang=${selectedLanguage.value}';
-      print('DEBUG: Fetching medications from: $url');
-
-      final response = await http
-          .get(
-            Uri.parse(url),
-            headers: {
-              'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json',
-            },
-          )
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw Exception('Request timeout');
-            },
-          );
-
-      print('DEBUG: Response status code: ${response.statusCode}');
-      print('DEBUG: Response body: ${response.body}');
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('DEBUG: Decoded JSON data: $data');
-
         final model = MedicationApiModel.fromJson(data);
 
         if (model.results != null && model.results!.isNotEmpty) {
-          print('DEBUG: Found ${model.results!.length} medications');
-
           for (var med in model.results!) {
-            print('DEBUG: Processing medication: ${med.genericName}');
-            print('DEBUG: Original image path: ${med.originalImage}');
-
             med.originalImage = _buildImageUrl(med.originalImage);
-
-            print('DEBUG: Final image URL: ${med.originalImage}');
           }
           medications.value = model.results!;
-          print('DEBUG: Medications updated successfully');
         } else {
           errorMessage.value = 'No medications available';
-          print('DEBUG: No medications in response');
         }
       } else {
         throw Exception('Failed: ${response.statusCode}');
       }
     } catch (e) {
       errorMessage.value = e.toString();
-      print('DEBUG: Error fetching medications: $e');
-      Get.snackbar('Error', 'Failed to load medications: $e');
+      _showSnackbar('Error', 'Failed to load medications: $e');
     } finally {
       isLoading.value = false;
     }
@@ -177,7 +149,7 @@ class MedicationController extends GetxController {
     try {
       final token = await StorageHelper.getToken();
       if (token == null) {
-        Get.snackbar('Error', 'No authentication token');
+        _showSnackbar('Error', 'No authentication token');
         return false;
       }
 
@@ -188,49 +160,51 @@ class MedicationController extends GetxController {
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         medications.removeWhere((med) => med.id == medId);
-        Get.snackbar('Success', 'Medication deleted');
+        _showSnackbar('Success', 'Medication deleted');
         return true;
       } else {
         throw Exception('Failed: ${response.statusCode}');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to delete medication');
-      print('DEBUG: Error deleting medication: $e');
+      _showSnackbar('Error', 'Failed to delete medication');
       return false;
     }
-  }
-
-  String _buildAudioUrl() {
-    return '$baseUrl/audio/medication/${medicationId.value}/?lang=${languageCode.value}';
   }
 
   Future<void> toggleAudio() async {
     try {
       if (isPlaying.value) {
-        await audioPlayer.pause();
-      } else {
-        final audioUrl = _buildAudioUrl();
-        print('DEBUG: Playing audio from: $audioUrl');
-        await audioPlayer.play(UrlSource(audioUrl));
+        await flutterTts.stop();
+        isPlaying.value = false;
+        return;
       }
-    } catch (e) {
-      Get.snackbar('Error', 'Audio playback failed: $e');
-      print('DEBUG: Audio playback error: $e');
-    }
-  }
 
-  Future<void> stopAudio() async {
-    try {
-      await audioPlayer.stop();
-      isPlaying.value = false;
+      final medication = medications.firstWhereOrNull((m) => m.id == medicationId.value);
+      if (medication == null) {
+        _showSnackbar('Error', 'No medication selected');
+        return;
+      }
+
+      final text = '''
+        Generic Name: ${medication.genericName}. 
+        Brand Name: ${medication.brandName}. 
+        Manufacturer: ${medication.manufacturer}. 
+        Drug Class: ${medication.drugClass}. 
+        Uses: ${medication.uses}. 
+        How to Take: ${medication.howToTake}.
+      ''';
+
+      isPlaying.value = true;
+      await flutterTts.speak(text);
+
     } catch (e) {
-      print('Error stopping audio: $e');
+      isPlaying.value = false;
+      _showSnackbar('Error', 'Failed to speak: $e');
     }
   }
 
   List<Results> get filteredMedications {
     if (searchQuery.value.isEmpty) return medications;
-
     final query = searchQuery.value.toLowerCase();
     return medications.where((med) {
       return (med.genericName?.toLowerCase().contains(query) ?? false) ||
@@ -240,11 +214,10 @@ class MedicationController extends GetxController {
 
   Future<void> changeLanguage(String displayLang) async {
     final langCode = languageCodes[displayLang] ?? 'en';
-
     if (selectedLanguage.value == langCode) return;
-
     selectedLanguage.value = langCode;
     languageCode.value = langCode;
+    await _setTtsLanguage();
     await fetchMedications();
   }
 
@@ -262,5 +235,11 @@ class MedicationController extends GetxController {
 
   void updateNoteText(String note) {
     noteText.value = note;
+  }
+
+  void _showSnackbar(String title, String message) {
+    if (Get.context != null) {
+      Get.snackbar(title, message, snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 3));
+    }
   }
 }

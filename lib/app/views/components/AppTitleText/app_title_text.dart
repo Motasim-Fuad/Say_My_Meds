@@ -12,8 +12,8 @@ class AppTitleText extends StatelessWidget {
       text,
       textAlign: TextAlign.center, // text-align: center
       style: GoogleFonts.poppins(
-        fontSize: 32, // font-size: 32px
-        fontWeight: FontWeight.w600, // SemiBold
+        fontSize: 22, // font-size: 32px
+        fontWeight: FontWeight.w500, // SemiBold
         fontStyle: FontStyle.normal,
         height: 1.0, // line-height: 100%
         letterSpacing: 0, // letter-spacing: 0%

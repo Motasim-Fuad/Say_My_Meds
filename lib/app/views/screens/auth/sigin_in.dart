@@ -76,7 +76,7 @@ class _SiginInViewsState extends State<SiginInViews> {
                     child: CustomTextField(
                       // label: "Email",
                       //  icon: Icons.email, // You need to specify an icon here
-                      hintText: "emilysm@gmail.com",
+                      hintText: "enter your gmail",
                       controller: emailController,
                       opatictyColor: '', // Optional, only if needed
                     ),

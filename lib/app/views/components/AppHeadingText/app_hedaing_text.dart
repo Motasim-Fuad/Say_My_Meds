@@ -13,8 +13,8 @@ class AppHeadingText extends StatelessWidget {
       textAlign: TextAlign.center, // center alignment
       style: GoogleFonts.poppins(
         color: Color(0xFF333333), // dark gray
-        fontSize: 30, // 30px
-        fontWeight: FontWeight.bold, // SemiBold
+        fontSize: 24, // 30px
+        fontWeight: FontWeight.w600, // SemiBold
         fontStyle: FontStyle.normal, // normal style
         height: 1.0, // line-height: 100%
         letterSpacing: 0.0, // letter-spacing: 0%

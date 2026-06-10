@@ -18,7 +18,7 @@ class AppSubtitleText extends StatelessWidget {
       textAlign: textAlign, // Apply the text alignment
       style: GoogleFonts.openSans(
         color: Color(0xFF333333),
-        fontSize: 24, // 24px
+        fontSize: 18, // 24px
         fontWeight: FontWeight.w600, // SemiBold
         fontStyle: FontStyle.normal, // normal style
         height: 1.0, // line-height: 100%

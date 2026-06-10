@@ -20,37 +20,60 @@ class _SignUpState extends State<SignUp> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
-      TextEditingController();
+  TextEditingController();
 
   final AuthController controller = Get.put(AuthController());
+
+  // Terms and Conditions checkbox state
+  bool isTermsAccepted = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        toolbarHeight: 80,
-        centerTitle: true,
-        title: Image.asset("assets/images/Logo 4.png", height: 83, width: 88),
-        leading: IconButton(
-          icon: Image.asset(
-            "assets/icons/Back_Icon.png",
-            height: 44,
-            width: 44,
-          ),
-          onPressed: () {
-            context.push('/signin');
-          },
-        ),
-        elevation: 0,
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Custom Header (replacing AppBar)
+              SizedBox(
+                height: 80,
+                child: Stack(
+                  children: [
+                    // Back Button
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: IconButton(
+                          icon: Image.asset(
+                            "assets/icons/Back_Icon.png",
+                            height: 44,
+                            width: 44,
+                          ),
+                          onPressed: () {
+                            context.push('/signin');
+                          },
+                        ),
+                      ),
+                    ),
+                    // Centered Logo
+                    Center(
+                      child: Image.asset(
+                        "assets/images/Logo 4.png",
+                        height: 83,
+                        width: 88,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
               Center(
                 child: Container(
                   width: 250,
@@ -58,7 +81,7 @@ class _SignUpState extends State<SignUp> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Center(child: AppHeadingText("Sign Up")),
+                  child: const Center(child: AppHeadingText("Sign Up")),
                 ),
               ),
               const SizedBox(height: 24),
@@ -100,29 +123,109 @@ class _SignUpState extends State<SignUp> {
                   ),
                 ],
               ),
-              const SizedBox(height: 25),
+
+              const SizedBox(height: 16),
+
+              // Terms and Conditions Checkbox
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Checkbox(
+                      value: isTermsAccepted,
+                      onChanged: (value) {
+                        setState(() {
+                          isTermsAccepted = value ?? false;
+                        });
+                      },
+                      activeColor: AppColors.buttonColor,
+                      checkColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () async {
+                          final result = await _showTermsAndConditions(context);
+                          if (result == true) {
+                            setState(() {
+                              isTermsAccepted = true;
+                            });
+                          }
+                        },
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                              height: 1.4,
+                            ),
+                            children: [
+                              const TextSpan(text: "I agree to the "),
+                              TextSpan(
+                                text: "Terms & Conditions",
+                                style: TextStyle(
+                                  color: AppColors.buttonColor,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                              const TextSpan(text: " and "),
+                              TextSpan(
+                                text: "Privacy Policy",
+                                style: TextStyle(
+                                  color: AppColors.buttonColor,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
 
               Obx(() {
                 return CustomButton(
-                  backgroundColor: AppColors.buttonColor,
+                  backgroundColor: isTermsAccepted
+                      ? AppColors.buttonColor
+                      : Colors.grey[400]!,
                   text: controller.isLoading.value
                       ? "Signing up..."
                       : "Sign up",
-                  onPressed: controller.isLoading.value
+                  onPressed: (controller.isLoading.value || !isTermsAccepted)
                       ? null
                       : () async {
-                          // ✅ Check if widget is still mounted before using context
-                          if (!mounted) return;
+                    // Check if widget is still mounted before using context
+                    if (!mounted) return;
 
-                          // Directly call register without terms check
-                          controller.register(
-                            name: nameController.text.trim(),
-                            email: emailController.text.trim(),
-                            password: passwordController.text.trim(),
-                            password2: confirmPasswordController.text.trim(),
-                            context: context,
-                          );
-                        },
+                    // Password validation
+                    if (passwordController.text.trim() != confirmPasswordController.text.trim()) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Passwords do not match"),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    // Directly call register without terms check
+                    controller.register(
+                      name: nameController.text.trim(),
+                      email: emailController.text.trim(),
+                      password: passwordController.text.trim(),
+                      password2: confirmPasswordController.text.trim(),
+                      context: context,
+                    );
+                  },
                 );
               }),
 
@@ -156,6 +259,7 @@ class _SignUpState extends State<SignUp> {
                   Image.asset("assets/icons/Apple.png", height: 70, width: 70),
                 ],
               ),
+              const SizedBox(height: 30), // Bottom padding
             ],
           ),
         ),
@@ -163,7 +267,7 @@ class _SignUpState extends State<SignUp> {
     );
   }
 
-  // ✅ Now returns Future<bool?> to communicate acceptance status
+  // Terms and Conditions Modal Bottom Sheet
   Future<bool?> _showTermsAndConditions(BuildContext context) async {
     bool agreed = false;
 
@@ -249,7 +353,7 @@ class _SignUpState extends State<SignUp> {
                               onPressed: () => Navigator.pop(
                                 context,
                                 false,
-                              ), // ✅ Return false on close
+                              ),
                               icon: Icon(Icons.close, color: Colors.grey[600]),
                               style: IconButton.styleFrom(
                                 backgroundColor: Colors.grey[100],
@@ -277,7 +381,7 @@ class _SignUpState extends State<SignUp> {
                             ),
                             _buildSection(
                               "2. Informational Use Only",
-                              "•  The App is provided solely for informational purposes to assist users in reading and understanding medication labels. The App is not a medical device and should not be relied upon for medical decision-making.",
+                              "• The App is provided solely for informational purposes to assist users in reading and understanding medication labels. The App is not a medical device and should not be relied upon for medical decision-making.",
                             ),
                             _buildSection(
                               "3. No Medical Advice",
@@ -399,7 +503,7 @@ class _SignUpState extends State<SignUp> {
                                 onPressed: () => Navigator.pop(
                                   context,
                                   false,
-                                ), // ✅ Return false on cancel
+                                ),
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
@@ -425,33 +529,27 @@ class _SignUpState extends State<SignUp> {
                               child: ElevatedButton(
                                 onPressed: agreed
                                     ? () {
-                                        // ✅ Return true when accepted
-                                        Navigator.pop(context, true);
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: const Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.check_circle,
-                                                  color: Colors.white,
-                                                ),
-                                                SizedBox(width: 12),
-                                                Text(
-                                                  "Successfully agreed to terms!",
-                                                ),
-                                              ],
-                                            ),
-                                            backgroundColor: Colors.green[600],
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
+                                  Navigator.pop(context, true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.check_circle,
+                                            color: Colors.white,
                                           ),
-                                        );
-                                      }
+                                          SizedBox(width: 12),
+                                          Text(
+                                            "Successfully agreed to terms!",
+                                          ),
+                                        ],
+                                      ),
+                                      backgroundColor: Colors.green,
+                                      behavior: SnackBarBehavior.floating,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
                                     : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: agreed

@@ -1,6 +1,6 @@
 class ApiConstants {
   static const String baseUrl =
-      "http://10.10.20.38:8000/";
+      "https://api.saymymeds.com/";
 
   /* auth start here  */
   static const String login = "$baseUrl/account/login/"; // Corrected the URL

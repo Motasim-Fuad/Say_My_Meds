@@ -2,38 +2,26 @@ PODS:
   - Flutter (1.0.0)
   - flutter_document_scanner_ios (0.5.0):
     - Flutter
-  - flutter_localization (0.0.1):
-    - Flutter
   - flutter_tts (0.0.1):
-    - Flutter
-  - permission_handler_apple (9.3.0):
     - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_document_scanner_ios (from `.symlinks/plugins/flutter_document_scanner_ios/ios`)
-  - flutter_localization (from `.symlinks/plugins/flutter_localization/ios`)
   - flutter_tts (from `.symlinks/plugins/flutter_tts/ios`)
-  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
   flutter_document_scanner_ios:
     :path: ".symlinks/plugins/flutter_document_scanner_ios/ios"
-  flutter_localization:
-    :path: ".symlinks/plugins/flutter_localization/ios"
   flutter_tts:
     :path: ".symlinks/plugins/flutter_tts/ios"
-  permission_handler_apple:
-    :path: ".symlinks/plugins/permission_handler_apple/ios"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_document_scanner_ios: 78e0f9d57e6b79abc1775d4e5cd1ba277e6449fa
-  flutter_localization: 72299fb6cb4e51cae587bd953ed0b958040b71e6
-  flutter_tts: b88dbc8655d3dc961bc4a796e4e16a4cc1795833
-  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
+  flutter_tts: 35ac3c7d42412733e795ea96ad2d7e05d0a75113
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
 

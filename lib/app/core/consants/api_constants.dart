@@ -1,6 +1,6 @@
 class ApiConstants {
   static const String baseUrl =
-      "https://api.saymymeds.com/";
+      "https://api.saymymeds.com";
 
   /* auth start here  */
   static const String login = "$baseUrl/account/login/"; // Corrected the URL

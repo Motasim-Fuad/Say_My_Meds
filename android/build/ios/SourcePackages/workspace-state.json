@@ -1,0 +1,97 @@
+{
+  "object" : {
+    "artifacts" : [
+
+    ],
+    "dependencies" : [
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "camera_avfoundation-0.9.20+6",
+          "kind" : "fileSystem",
+          "location" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/camera_avfoundation-0.9.20+6",
+          "name" : "camera_avfoundation"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/camera_avfoundation-0.9.20+6"
+        },
+        "subpath" : "camera_avfoundation-0.9.20+6"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "flutterframework",
+          "kind" : "fileSystem",
+          "location" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/FlutterFramework",
+          "name" : "FlutterFramework"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/FlutterFramework"
+        },
+        "subpath" : "flutterframework"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "image_picker_ios-0.8.13",
+          "kind" : "fileSystem",
+          "location" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/image_picker_ios-0.8.13",
+          "name" : "image_picker_ios"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/image_picker_ios-0.8.13"
+        },
+        "subpath" : "image_picker_ios-0.8.13"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "mobile_scanner-7.0.1",
+          "kind" : "fileSystem",
+          "location" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/mobile_scanner-7.0.1",
+          "name" : "mobile_scanner"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/mobile_scanner-7.0.1"
+        },
+        "subpath" : "mobile_scanner-7.0.1"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "path_provider_foundation-2.4.2",
+          "kind" : "fileSystem",
+          "location" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/path_provider_foundation-2.4.2",
+          "name" : "path_provider_foundation"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/path_provider_foundation-2.4.2"
+        },
+        "subpath" : "path_provider_foundation-2.4.2"
+      },
+      {
+        "basedOn" : null,
+        "packageRef" : {
+          "identity" : "shared_preferences_foundation-2.5.4",
+          "kind" : "fileSystem",
+          "location" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/shared_preferences_foundation-2.5.4",
+          "name" : "shared_preferences_foundation"
+        },
+        "state" : {
+          "name" : "fileSystem",
+          "path" : "/Users/motasimfuad/StudioProjects/Say_My_Meds/ios/Flutter/ephemeral/Packages/.packages/shared_preferences_foundation-2.5.4"
+        },
+        "subpath" : "shared_preferences_foundation-2.5.4"
+      }
+    ],
+    "prebuilts" : [
+
+    ]
+  },
+  "version" : 7
+}

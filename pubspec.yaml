@@ -37,26 +37,26 @@ dependencies:
   flutter_document_scanner: ^1.1.2
   image_picker: ^1.2.0
   get: ^4.7.2
-  go_router: ^16.1.0
+  go_router: ^17.3.0
   flutter_svg: ^2.2.0
   device_preview: ^1.3.1
   flutter_screenutil: ^5.9.3
   flutter_gen: ^5.11.0
   pin_code_fields: ^8.0.1
-  google_fonts: ^6.3.2
+  google_fonts: ^8.1.0
 
   #  image sca ne
-  mobile_scanner: ^7.0.1
+  mobile_scanner: 5.2.3
   camera: ^0.10.6
   permission_handler_ohos: ^0.0.6
   permission_handler: ^12.0.1
   modal_progress_hud_nsn: ^0.5.1
   http: ^1.5.0
   shared_preferences: ^2.5.3
-  flutter_localization: ^0.3.3
+  flutter_localization: ^0.4.0
   flutter_translate: ^3.1.0
   collection: ^1.19.1
-  flutter_tts: ^3.8.5
+  flutter_tts: ^4.2.5
 
 dev_dependencies:
   flutter_test:

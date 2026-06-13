@@ -194,7 +194,7 @@ class _HomeViewPageState extends State<HomeViewPage> {
                         children: [
                           Center(
                             child: Image.asset(
-                              "assets/images/.png.png",
+                              "assets/images/logo.png",
                               height: 323,
                               fit: BoxFit.contain,
                             ),

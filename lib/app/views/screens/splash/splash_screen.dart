@@ -34,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
             children: [
               // Ensure the image path is correct
               Image.asset(
-                "assets/images/.png.png",
+                "assets/images/logo.png",
                 height: 572.h,
                 width: 572.w,
                 // fit: BoxFit.cover,

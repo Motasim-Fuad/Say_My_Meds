@@ -5,16 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:saymymeds/app/core/app_routes/app_routes.dart';
-
-import 'package:get/get.dart';
 import 'package:saymymeds/app/views/multi_langus/app_transle.dart';
-
-// void main() => runApp(
-//   DevicePreview(
-//     enabled: !kReleaseMode,
-//     builder: (context) => const MyApp(), // Wrap your app
-//   ),
-// );
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

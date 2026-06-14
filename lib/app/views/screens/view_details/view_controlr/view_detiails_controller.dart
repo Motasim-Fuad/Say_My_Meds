@@ -344,7 +344,7 @@ class ViewDetailsController extends GetxController {
 
       await http
           .post(
-        Uri.parse('${baseUrl}api/core/notes/'),
+        Uri.parse('${baseUrl}/core/notes/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

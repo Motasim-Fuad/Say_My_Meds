@@ -96,12 +96,29 @@ class MedicationController extends GetxController {
 
   String _buildImageUrl(String? imagePath) {
     if (imagePath == null || imagePath.isEmpty) return '';
+
     final trimmedPath = imagePath.trim();
+
+    // If already full URL
     if (trimmedPath.startsWith('http://') || trimmedPath.startsWith('https://')) {
       return trimmedPath;
     }
-    final cleanPath = trimmedPath.startsWith('/') ? trimmedPath : '/$trimmedPath';
-    return '$mediaBaseUrlForImages$cleanPath';
+
+    // Clean base URL
+    String cleanBaseUrl = ApiConstants.baseUrl;
+    if (cleanBaseUrl.endsWith('/')) {
+      cleanBaseUrl = cleanBaseUrl.substring(0, cleanBaseUrl.length - 1);
+    }
+
+    // Clean path
+    String cleanPath = trimmedPath;
+    if (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
+    }
+
+    final fullUrl = '$cleanBaseUrl/$cleanPath';
+    print('🖼️ Built image URL: $fullUrl');
+    return fullUrl;
   }
 
   Future<void> fetchMedications() async {
@@ -127,7 +144,7 @@ class MedicationController extends GetxController {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json'
         },
-      ).timeout(const Duration(seconds: 15));
+      );
 
       print('📥 Response status code: ${response.statusCode}');
 

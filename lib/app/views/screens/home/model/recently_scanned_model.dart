@@ -27,7 +27,7 @@ class RecentlyScanned {
 
 class Medication {
   final int id;
-  final String originalImage;
+  String originalImage;  // ✅ final সরানো হয়েছে, এখন set করা যাবে
   final String genericName;
   final String brandName;
   final String manufacturer;
@@ -95,9 +95,9 @@ class Medication {
       createdAt: _tryParseDateTime(json['created_at']),
       updatedAt: _tryParseDateTime(json['updated_at']),
       additionalNotes:
-          (json['additional_notes'] as List<dynamic>?)
-              ?.map((e) => AdditionalNote.fromJson(e as Map<String, dynamic>))
-              .toList() ??
+      (json['additional_notes'] as List<dynamic>?)
+          ?.map((e) => AdditionalNote.fromJson(e as Map<String, dynamic>))
+          .toList() ??
           [],
     );
   }

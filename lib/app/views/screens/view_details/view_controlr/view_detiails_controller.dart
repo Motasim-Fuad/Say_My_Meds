@@ -651,8 +651,28 @@ class ViewDetailsController extends GetxController {
 
   String get currentImageUrl {
     final medVal = medicationData.value;
-    final url = medVal?.uploadedImage?.url;
-    final fullUrl = url != null ? '${ApiConstants.baseUrl}$url' : '';
+    if (medVal == null) return '';
+
+    final url = medVal.uploadedImage?.url;
+    if (url == null || url.isEmpty) return '';
+
+    // URL already has base? check
+    if (url.startsWith('http')) return url;
+
+    // Clean base URL
+    String cleanBaseUrl = ApiConstants.baseUrl;
+    if (cleanBaseUrl.endsWith('/')) {
+      cleanBaseUrl = cleanBaseUrl.substring(0, cleanBaseUrl.length - 1);
+    }
+
+    // Clean path
+    String cleanPath = url;
+    if (cleanPath.startsWith('/')) {
+      cleanPath = cleanPath.substring(1);
+    }
+
+    final fullUrl = '$cleanBaseUrl/$cleanPath';
+    print('🖼️ Current image URL: $fullUrl');
     return fullUrl;
   }
 

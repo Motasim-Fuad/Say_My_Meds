@@ -393,23 +393,46 @@ class _HomeViewPageState extends State<HomeViewPage> {
     });
   }
 
-  // মেডিসিন কার্ড বিল্ড করার মেথড
+
+
+// মেডিসিন কার্ড বিল্ড করার মেথড
   Widget _buildMedicineCard(dynamic medicine) {
+    // ✅ ইমেজ URL তৈরি করুন
+    String getImageUrl() {
+      if (medicine.originalImage == null || medicine.originalImage.isEmpty) {
+        return '';
+      }
+
+      String imagePath = medicine.originalImage;
+      if (imagePath.startsWith('http')) {
+        return imagePath;
+      }
+
+      String cleanBaseUrl = ApiConstants.baseUrl;
+      if (cleanBaseUrl.endsWith('/')) {
+        cleanBaseUrl = cleanBaseUrl.substring(0, cleanBaseUrl.length - 1);
+      }
+
+      String cleanPath = imagePath;
+      if (cleanPath.startsWith('/')) {
+        cleanPath = cleanPath.substring(1);
+      }
+
+      return '$cleanBaseUrl/$cleanPath';
+    }
+
     return Card(
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: const BorderSide(
-          color: Color(0xFF4F85AA),
-          width: 0.5,
-        ),
+        side: const BorderSide(color: Color(0xFF4F85AA), width: 0.5),
       ),
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Medicine Image
+            // ✅ Medicine Image
             Container(
               width: 80,
               height: 80,
@@ -420,7 +443,7 @@ class _HomeViewPageState extends State<HomeViewPage> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
-                  '$baseUrl${medicine.originalImage}',
+                  getImageUrl(),
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Icon(
                     Icons.medication_outlined,
@@ -442,11 +465,12 @@ class _HomeViewPageState extends State<HomeViewPage> {
             ),
             const SizedBox(width: 12),
 
-            // Medicine Details
+            // ✅ Medicine Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Medicine Name
                   Text(
                     medicine.genericName,
                     style: const TextStyle(
@@ -459,6 +483,8 @@ class _HomeViewPageState extends State<HomeViewPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
+
+                  // Generic Name (Brand Name)
                   RichText(
                     text: TextSpan(
                       style: const TextStyle(
@@ -480,6 +506,8 @@ class _HomeViewPageState extends State<HomeViewPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
+
+                  // Date and View Details
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

@@ -1,3 +1,5 @@
+// lib/app/views/screens/home/controller/recently_scenned_controller.dart
+
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:saymymeds/app/core/consants/api_constants.dart';
@@ -18,24 +20,36 @@ class RecentlyScannedController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-
     currentLanguage.value = Get.locale?.languageCode ?? 'en';
-
     ever(globalLanguageCode, (_) {
       _syncLanguageFromGlobal();
     });
-
     fetchRecentlyScanned();
   }
 
   void _syncLanguageFromGlobal() {
     final newLang = globalLanguageCode.value;
-
     if (currentLanguage.value != newLang) {
       currentLanguage.value = newLang;
       fetchRecentlyScanned();
       print('✅ Recently Scanned: Language synced to $newLang');
     }
+  }
+
+  String _buildImageUrl(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) return '';
+
+    String path = imagePath.trim();
+    if (path.startsWith('http')) return path;
+
+    String cleanBaseUrl = ApiConstants.baseUrl;
+    if (cleanBaseUrl.endsWith('/')) {
+      cleanBaseUrl = cleanBaseUrl.substring(0, cleanBaseUrl.length - 1);
+    }
+    if (path.startsWith('/')) {
+      path = path.substring(1);
+    }
+    return '$cleanBaseUrl/$path';
   }
 
   Future<void> fetchRecentlyScanned() async {
@@ -50,61 +64,49 @@ class RecentlyScannedController extends GetxController {
         return;
       }
 
-      var headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
-
       final url = Uri.parse('$baseUrl$apiPath/medications/?lang=${currentLanguage.value}');
       print('🌐 Fetching from: $url');
 
-      var response = await http.get(url, headers: headers);
+      var response = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      );
 
       print('📥 Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
         final recentlyScanned = RecentlyScanned.fromJson(jsonResponse);
-
         final results = recentlyScanned.results ?? [];
+
         print('📊 Results count: ${results.length}');
 
-        // Print IDs before sorting
-        for (var med in results) {
-          print('   📝 Medication ID: ${med.id}, Name: ${med.genericName}');
-        }
+        if (results.isNotEmpty) {
+          // ইমেজ URL তৈরি করুন
+          for (var med in results) {
+            med.originalImage = _buildImageUrl(med.originalImage);
+          }
 
-        // ✅ গুরুত্বপূর্ণ: আইডি অনুযায়ী Descending order এ সাজান (বড় থেকে ছোট)
-        // মানে: 7, 6, 5 এই ক্রমে দেখাবে
-        final sortedResults = results..sort((a, b) => b.id!.compareTo(a.id!));
+          // ID অনুযায়ী Descending order (সর্বশেষ প্রথমে)
+          results.sort((a, b) => b.id.compareTo(a.id));
 
-        print('📊 After sorting by ID (descending):');
-        for (var med in sortedResults) {
-          print('   📝 Medication ID: ${med.id}, Name: ${med.genericName}');
-        }
+          medicines.value = results.length > 3 ? results.sublist(0, 3) : results;
+          medicines.refresh();
 
-        if (sortedResults.isEmpty) {
-          medicines.value = [];
-        } else if (sortedResults.length > 3) {
-          // সবচেয়ে বড় ID থেকে 3টা নিবে (সর্বশেষ 3টা)
-          medicines.value = sortedResults.sublist(0, 3);
+          print('✅ Recently Scanned loaded: ${medicines.length} items');
+          for (var med in medicines) {
+            print('   🎯 ID: ${med.id}, Name: ${med.genericName}');
+          }
         } else {
-          medicines.value = sortedResults;
-        }
-
-        medicines.refresh();
-        print('✅ Recently Scanned loaded: ${medicines.length} items (latest first)');
-
-        // Final display order
-        for (var med in medicines) {
-          print('   🎯 Displaying ID: ${med.id}, Name: ${med.genericName}');
+          medicines.value = [];
+          print('⚠️ No medications found');
         }
       } else {
-        errorMessage('Failed to load medications: ${response.statusCode}');
+        errorMessage('Failed: ${response.statusCode}');
       }
     } catch (e) {
       errorMessage('Error: $e');
-      print('❌ Error fetching medications: $e');
+      print('❌ Error: $e');
     } finally {
       isLoading(false);
     }

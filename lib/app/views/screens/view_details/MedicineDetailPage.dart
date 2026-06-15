@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:saymymeds/app/core/app_routes/app_routes.dart';
 import 'package:saymymeds/app/utlies/apps_color.dart';
 import 'package:saymymeds/app/views/screens/view_details/view_controlr/view_detiails_controller.dart';
-import 'package:saymymeds/app/views/screens/view_details/medication_preview_model/medication_preview.dart';
+import 'package:saymymeds/app/views/screens/view_details/medication_preview_model/medication_model.dart';
 import 'package:get/get.dart';
 import 'package:saymymeds/app/widgets/BottomNav.dart';
 
@@ -84,33 +84,33 @@ class MedicineDetailPage extends StatefulWidget {
 }
 
 class _MedicineDetailPageState extends State<MedicineDetailPage> {
+  int _currentIndex = 0;
+
+  void _onNavTap(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+    switch (index) {
+      case 0:
+        context.go(AppRoutes.homeViewPage);
+        break;
+      case 1:
+        context.go(AppRoutes.imageScannerScreen);
+        break;
+      case 2:
+        context.go(AppRoutes.medication);
+        break;
+      case 3:
+        context.go(AppRoutes.settingPage);
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ViewDetailsController controller = Get.find<ViewDetailsController>();
     const divider = Color(0xFF4F85AA);
     const blue = Color(0xFF4F85AA);
-
-    int _currentIndex = 0;
-
-    void _onNavTap(int index) {
-      setState(() {
-        _currentIndex = index;
-      });
-      switch (index) {
-        case 0:
-          context.go(AppRoutes.homeViewPage);
-          break;
-        case 1:
-          context.go(AppRoutes.imageScannerScreen);
-          break;
-        case 2:
-          context.go(AppRoutes.medication);
-          break;
-        case 3:
-          context.go(AppRoutes.settingPage);
-          break;
-      }
-    }
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -127,6 +127,11 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
 
                 final data = controller.medicationData.value!;
                 final analysis = data.aiAnalysis;
+
+                // ✅ Loading state variables - সঠিকভাবে access করুন
+                final bool isLoading = controller.isLoading.value;
+                final bool isSaving = controller.isSaving.value;
+                final bool isLoadingAny = isLoading || isSaving;
 
                 return Stack(
                   children: [
@@ -174,25 +179,21 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                     ),
                                     child: DropdownButtonHideUnderline(
                                       child: DropdownButton<String>(
-                                        dropdownColor:
-                                            AppColors.whiteBackground,
-
+                                        dropdownColor: AppColors.whiteBackground,
                                         value: controller.languageMap.keys
                                             .firstWhere(
                                               (key) =>
-                                                  controller.languageMap[key] ==
-                                                  controller
-                                                      .selectedLanguage
-                                                      .value,
-                                              orElse: () => 'English',
-                                            ),
+                                          controller.languageMap[key] ==
+                                              controller.selectedLanguage.value,
+                                          orElse: () => 'English',
+                                        ),
                                         isExpanded: true,
                                         icon: const Icon(
                                           Icons.expand_more_rounded,
                                         ),
                                         items: controller.languageMap.keys.map((
-                                          String language,
-                                        ) {
+                                            String language,
+                                            ) {
                                           return DropdownMenuItem(
                                             value: language,
                                             child: Text(
@@ -201,12 +202,12 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                             ),
                                           );
                                         }).toList(),
-                                        onChanged: (String? newValue) {
+                                        // ✅ Fixed: isLoadingAny ব্যবহার করুন
+                                        onChanged: isLoadingAny
+                                            ? null
+                                            : (String? newValue) {
                                           if (newValue != null) {
-                                            controller.changeLanguage(
-                                              newValue,
-                                              context,
-                                            );
+                                            controller.changeLanguage(newValue, context);
                                           }
                                         },
                                       ),
@@ -219,12 +220,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
 
                             // Main card
                             Container(
-                              padding: const EdgeInsets.fromLTRB(
-                                12,
-                                12,
-                                12,
-                                18,
-                              ),
+                              padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -240,8 +236,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                     child: Padding(
                                       padding: const EdgeInsets.all(8.0),
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           // Image area
                                           SizedBox(
@@ -251,44 +246,27 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                               padding: const EdgeInsets.all(10),
                                               child: Container(
                                                 decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  color: const Color(
-                                                    0xFFF8F9FB,
-                                                  ),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  color: const Color(0xFFF8F9FB),
                                                 ),
                                                 child: Center(
                                                   child: ClipRRect(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                    child:
-                                                        controller
-                                                            .currentImageUrl
-                                                            .isNotEmpty
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    child: controller.currentImageUrl.isNotEmpty
                                                         ? Image.network(
-                                                            controller
-                                                                .currentImageUrl,
-                                                            width: 160,
-                                                            height: 170,
-                                                            fit: BoxFit.contain,
-                                                            errorBuilder:
-                                                                (
-                                                                  _,
-                                                                  __,
-                                                                  ___,
-                                                                ) => const Icon(
-                                                                  Icons
-                                                                      .medication_outlined,
-                                                                  size: 72,
-                                                                ),
-                                                          )
+                                                      controller.currentImageUrl,
+                                                      width: 160,
+                                                      height: 170,
+                                                      fit: BoxFit.contain,
+                                                      errorBuilder: (_, __, ___) => const Icon(
+                                                        Icons.medication_outlined,
+                                                        size: 72,
+                                                      ),
+                                                    )
                                                         : const Icon(
-                                                            Icons
-                                                                .medication_outlined,
-                                                            size: 72,
-                                                          ),
+                                                      Icons.medication_outlined,
+                                                      size: 72,
+                                                    ),
                                                   ),
                                                 ),
                                               ),
@@ -301,8 +279,10 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                             height: 100,
                                             width: 360,
                                             child: ElevatedButton.icon(
-                                              onPressed: () => controller
-                                                  .toggleAudio(context),
+                                              // ✅ Fixed: isLoadingAny ব্যবহার করুন
+                                              onPressed: isLoadingAny
+                                                  ? null
+                                                  : () => controller.toggleAudio(context),
                                               icon: Container(
                                                 width: 50,
                                                 height: 50,
@@ -310,34 +290,26 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                                   color: Colors.white,
                                                   shape: BoxShape.circle,
                                                 ),
-                                                child: Icon(
+                                                child: Obx(() => Icon(
                                                   controller.isPlaying.value
                                                       ? Icons.pause_rounded
-                                                      : Icons
-                                                            .play_arrow_rounded,
-                                                  color: const Color(
-                                                    0xFF4F85AA,
-                                                  ),
+                                                      : Icons.play_arrow_rounded,
+                                                  color: const Color(0xFF4F85AA),
                                                   size: 50,
-                                                ),
+                                                )),
                                               ),
-                                              label: Text(
-                                                controller.isPlaying.value
-                                                    ? 'pause'.tr
-                                                    : 'play'.tr,
+                                              label: Obx(() => Text(
+                                                controller.isPlaying.value ? 'pause'.tr : 'play'.tr,
                                                 style: const TextStyle(
                                                   fontSize: 40,
                                                   fontWeight: FontWeight.w600,
                                                 ),
-                                              ),
+                                              )),
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(
-                                                  0xFF4F85AA,
-                                                ),
+                                                backgroundColor: const Color(0xFF4F85AA),
                                                 foregroundColor: Colors.white,
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(14),
+                                                  borderRadius: BorderRadius.circular(14),
                                                 ),
                                               ),
                                             ),
@@ -358,7 +330,6 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                           // Pills count
                                           if (analysis?.totPills != null)
                                             Text(
-                                              //  ${'pills'.tr})
                                               '( ${analysis!.totPills} ) ',
                                               style: const TextStyle(
                                                 fontSize: 20,
@@ -370,52 +341,29 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                           MedicineDetailPage._divider(divider),
 
                                           // Info sections
-                                          MedicineDetailPage._sectionTitle(
-                                            'generic_name'.tr,
-                                          ),
-                                          MedicineDetailPage._sectionValue(
-                                            analysis?.genericName ?? 'N/A',
-                                          ),
+                                          MedicineDetailPage._sectionTitle('generic_name'.tr),
+                                          MedicineDetailPage._sectionValue(analysis?.genericName ?? 'N/A'),
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'brand_name'.tr,
-                                          ),
-                                          MedicineDetailPage._sectionValue(
-                                            analysis?.brandName ?? 'N/A',
-                                          ),
+                                          MedicineDetailPage._sectionTitle('brand_name'.tr),
+                                          MedicineDetailPage._sectionValue(analysis?.brandName ?? 'N/A'),
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'manufacturer'.tr,
-                                          ),
-                                          MedicineDetailPage._sectionValue(
-                                            analysis?.manufacturer ?? 'N/A',
-                                          ),
+                                          MedicineDetailPage._sectionTitle('manufacturer'.tr),
+                                          MedicineDetailPage._sectionValue(analysis?.manufacturer ?? 'N/A'),
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'drug_class'.tr,
-                                          ),
-                                          MedicineDetailPage._sectionValue(
-                                            analysis?.drugClass ?? 'N/A',
-                                          ),
+                                          MedicineDetailPage._sectionTitle('drug_class'.tr),
+                                          MedicineDetailPage._sectionValue(analysis?.drugClass ?? 'N/A'),
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'uses'.tr,
-                                          ),
-                                          MedicineDetailPage._sectionValue(
-                                            analysis?.uses ?? 'N/A',
-                                          ),
+                                          MedicineDetailPage._sectionTitle('uses'.tr),
+                                          MedicineDetailPage._sectionValue(analysis?.uses ?? 'N/A'),
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'dosage_information'.tr,
-                                          ),
+                                          MedicineDetailPage._sectionTitle('dosage_information'.tr),
                                           const SizedBox(height: 6),
-                                          if (analysis?.dosageInformation !=
-                                              null) ...[
+                                          if (analysis?.dosageInformation != null) ...[
                                             MedicineDetailPage._bulleter(
                                               '${'adults'.tr}: ${analysis!.dosageInformation!.adultsDosage ?? "N/A"}',
                                             ),
@@ -428,19 +376,12 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                           ],
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'how_to_take'.tr,
-                                          ),
-                                          MedicineDetailPage._bullet(
-                                            analysis?.howToTake ?? 'N/A',
-                                          ),
+                                          MedicineDetailPage._sectionTitle('how_to_take'.tr),
+                                          MedicineDetailPage._bullet(analysis?.howToTake ?? 'N/A'),
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'side_effects'.tr,
-                                          ),
-                                          if (analysis?.sideEffects !=
-                                              null) ...[
+                                          MedicineDetailPage._sectionTitle('side_effects'.tr),
+                                          if (analysis?.sideEffects != null) ...[
                                             MedicineDetailPage._bullet(
                                               '${'common'.tr}: ${analysis!.sideEffects!.common ?? "N/A"}',
                                             ),
@@ -450,30 +391,17 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                           ],
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'warnings'.tr,
-                                          ),
-                                          MedicineDetailPage._bullet(
-                                            analysis?.warnings ?? 'N/A',
-                                          ),
+                                          MedicineDetailPage._sectionTitle('warnings'.tr),
+                                          MedicineDetailPage._bullet(analysis?.warnings ?? 'N/A'),
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'storage_instructions'.tr,
-                                          ),
-                                          MedicineDetailPage._bullet(
-                                            analysis?.storageInstructions ??
-                                                'N/A',
-                                          ),
+                                          MedicineDetailPage._sectionTitle('storage_instructions'.tr),
+                                          MedicineDetailPage._bullet(analysis?.storageInstructions ?? 'N/A'),
                                           MedicineDetailPage._divider(divider),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'interactions'.tr,
-                                          ),
+                                          MedicineDetailPage._sectionTitle('interactions'.tr),
                                           Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 6,
-                                            ),
+                                            padding: const EdgeInsets.only(top: 6),
                                             child: Text(
                                               analysis?.interactions ?? 'N/A',
                                               style: const TextStyle(
@@ -484,61 +412,34 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                             ),
                                           ),
 
-                                          MedicineDetailPage._sectionTitle(
-                                            'add_notes'.tr,
-                                          ),
+                                          MedicineDetailPage._sectionTitle('add_notes'.tr),
                                           const SizedBox(height: 10),
                                           Container(
                                             height: 80,
                                             width: 360,
                                             decoration: BoxDecoration(
                                               color: Colors.white,
-                                              border: Border.all(
-                                                color: Colors.grey,
-                                              ),
-                                              borderRadius:
-                                                  const BorderRadius.all(
-                                                    Radius.circular(8),
-                                                  ),
+                                              border: Border.all(color: Colors.grey),
+                                              borderRadius: const BorderRadius.all(Radius.circular(8)),
                                             ),
                                             child: Padding(
-                                              padding: const EdgeInsets.all(
-                                                10.0,
-                                              ),
+                                              padding: const EdgeInsets.all(10.0),
                                               child: Row(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
                                                 children: [
                                                   Expanded(
                                                     child: TextField(
-                                                      onChanged: (value) =>
-                                                          controller
-                                                              .updateNotes(
-                                                                value,
-                                                              ),
-                                                      decoration:
-                                                          InputDecoration(
-                                                            hintText:
-                                                                'add_notes'.tr,
-                                                            hintStyle:
-                                                                const TextStyle(
-                                                                  color: Colors
-                                                                      .grey,
-                                                                ),
-                                                            border: InputBorder
-                                                                .none,
-                                                          ),
+                                                      onChanged: (value) => controller.updateNotes(value),
+                                                      decoration: InputDecoration(
+                                                        hintText: 'add_notes'.tr,
+                                                        hintStyle: const TextStyle(color: Colors.grey),
+                                                        border: InputBorder.none,
+                                                      ),
                                                     ),
                                                   ),
                                                   const Padding(
-                                                    padding: EdgeInsets.only(
-                                                      top: 3.0,
-                                                    ),
-                                                    child: Icon(
-                                                      Icons.edit,
-                                                      size: 30,
-                                                      color: Colors.grey,
-                                                    ),
+                                                    padding: EdgeInsets.only(top: 3.0),
+                                                    child: Icon(Icons.edit, size: 30, color: Colors.grey),
                                                   ),
                                                 ],
                                               ),
@@ -553,22 +454,33 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                             ),
                             const SizedBox(height: 0.5),
 
-                            // Save button
+                            // Save button with loading state
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: SizedBox(
                                 width: double.infinity,
                                 height: 48,
-                                child: ElevatedButton(
-                                  onPressed: () =>
-                                      controller.saveMedication(context),
+                                child: Obx(() => ElevatedButton(
+                                  // ✅ Fixed: isLoadingAny ব্যবহার করুন
+                                  onPressed: isLoadingAny
+                                      ? null
+                                      : () => controller.saveMedication(context),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF4F85AA),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  child: Text(
+                                  child: controller.isSaving.value
+                                      ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                      : Text(
                                     'save_note'.tr,
                                     style: const TextStyle(
                                       fontSize: 16,
@@ -576,7 +488,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                       color: Colors.white,
                                     ),
                                   ),
-                                ),
+                                )),
                               ),
                             ),
                             const SizedBox(height: 60),
@@ -585,12 +497,49 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                       ),
                     ),
 
-                    // Loading indicator
-                    if (controller.isLoading.value)
+                    // ✅ উন্নত লোডিং ওভারলে (মেসেজ সহ)
+                    if (controller.isAnalyzing || controller.isSavingData || controller.hasLoadingMessage)
                       Container(
-                        color: Colors.black.withOpacity(0.5),
-                        child: const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
+                        color: Colors.black.withOpacity(0.7),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            margin: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const CircularProgressIndicator(
+                                  color: Color(0xFF4F85AA),
+                                  strokeWidth: 3,
+                                ),
+                                const SizedBox(height: 20),
+                                Obx(() => Text(
+                                  controller.getLoadingMessage,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF333333),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                )),
+                                if (controller.isSavingData) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Please do not close the app'.tr,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                   ],

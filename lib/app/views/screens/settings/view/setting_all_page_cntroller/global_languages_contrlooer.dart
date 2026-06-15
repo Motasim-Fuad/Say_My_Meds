@@ -112,13 +112,12 @@ class GlobalLanguageController extends GetxController {
 
         if (success) {
           print("✅ Language saved to backend: $langCode");
-          Get.snackbar(
+
+          // ✅ FIX: Snackbar দেখানোর আগে context চেক করুন
+          _showSnackbar(
             'Success',
             'Language changed to $displayLanguageName',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 2),
+            isError: false,
           );
         }
       }
@@ -126,15 +125,34 @@ class GlobalLanguageController extends GetxController {
       _syncLanguageToAllControllers(langCode);
     } catch (e) {
       print('❌ Error changing language: $e');
-      Get.snackbar(
+      _showSnackbar(
         'Error',
         'Failed to change language',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+        isError: true,
       );
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  // ✅ নতুন মেথড: সেফভাবে Snackbar দেখানোর জন্য
+  void _showSnackbar(String title, String message, {bool isError = false}) {
+    // Get.context চেক করুন
+    if (Get.context != null) {
+      Get.snackbar(
+        title,
+        message,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: isError ? Colors.red : Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(10),
+        borderRadius: 8,
+      );
+    } else {
+      // যদি context না থাকে, print করুন
+      print("⚠️ Cannot show snackbar: No context available");
+      print("   Message: $title - $message");
     }
   }
 
@@ -155,7 +173,7 @@ class GlobalLanguageController extends GetxController {
         checkInfoController.updateGlobalLanguage(langCode);
       }
 
-      // ✅ NEW: Sync with ViewDetailsController
+      // ✅ Sync with ViewDetailsController
       if (Get.isRegistered<ViewDetailsController>()) {
         final viewDetailsController = Get.find<ViewDetailsController>();
         viewDetailsController.updateGlobalLanguage(langCode);

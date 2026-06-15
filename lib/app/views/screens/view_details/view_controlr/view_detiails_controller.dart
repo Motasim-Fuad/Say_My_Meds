@@ -11,24 +11,24 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:saymymeds/app/core/app_routes/app_routes.dart';
 import 'package:saymymeds/app/core/consants/api_constants.dart';
 import 'package:saymymeds/app/utlies/storage_helper.dart';
-import 'package:saymymeds/app/views/screens/view_details/medication_preview_model/medication_preview.dart';
+import 'package:saymymeds/app/views/screens/view_details/medication_preview_model/medication_model.dart';
 import 'package:saymymeds/app/views/screens/settings/view/setting_all_page_cntroller/global_languages_contrlooer.dart';
 
 class ViewDetailsController extends GetxController {
   final Rx<File?> selectedImage = Rx<File?>(null);
   final RxBool isLoading = RxBool(false);
+  final RxBool isSaving = RxBool(false); // ✅ নতুন: শুধু save এর জন্য loading
   final RxBool isPlaying = RxBool(false);
   final RxString selectedLanguage = RxString('en');
   final RxString notes = RxString('');
-  final Rx<MedicationPreviewModel?> medicationData =
-  Rx<MedicationPreviewModel?>(null);
+  final Rx<MedicationPreviewModel?> medicationData = Rx<MedicationPreviewModel?>(null);
   final RxInt refreshUI = RxInt(0);
+  final RxString loadingMessage = RxString(''); // ✅ নতুন: loading message দেখানোর জন্য
 
   late final FlutterTts _flutterTts;
   bool _ttsInitialized = false;
 
   final ImagePicker _picker = ImagePicker();
-  final String baseUrl = ApiConstants.baseUrl;
 
   GlobalLanguageController? _globalLanguageController;
 
@@ -73,11 +73,7 @@ class ViewDetailsController extends GetxController {
 
     try {
       _globalLanguageController = Get.find<GlobalLanguageController>();
-      final currentLangCode =
-          _globalLanguageController!.languageMap[_globalLanguageController!
-              .selectedDisplayLanguage
-              .value] ??
-              'en';
+      final currentLangCode = _globalLanguageController!.languageMap[_globalLanguageController!.selectedDisplayLanguage.value] ?? 'en';
       selectedLanguage.value = currentLangCode;
       print('✅ Synced with GlobalLanguageController: $currentLangCode');
     } catch (e) {
@@ -88,25 +84,23 @@ class ViewDetailsController extends GetxController {
   Future<void> _initTts() async {
     try {
       _flutterTts = FlutterTts();
-
       await Future.delayed(const Duration(milliseconds: 500));
-
       await _setTtsLanguage();
       await _flutterTts.setSpeechRate(0.5);
       await _flutterTts.setPitch(1.0);
 
       _flutterTts.setCompletionHandler(() {
-        print('TTS Completed');
+        print('🎤 TTS Completed');
         isPlaying.value = false;
       });
 
       _flutterTts.setErrorHandler((msg) {
-        print('TTS Error: $msg');
+        print('🎤 TTS Error: $msg');
         isPlaying.value = false;
       });
 
       _flutterTts.setStartHandler(() {
-        print('TTS Started');
+        print('🎤 TTS Started');
       });
 
       _ttsInitialized = true;
@@ -121,9 +115,9 @@ class ViewDetailsController extends GetxController {
     try {
       String ttsLang = ttsLanguageMap[selectedLanguage.value] ?? 'en-US';
       await _flutterTts.setLanguage(ttsLang);
-      print('TTS Language set to: $ttsLang');
+      print('🎤 TTS Language set to: $ttsLang');
     } catch (e) {
-      print('Error setting language: $e');
+      print('🎤 Error setting TTS language: $e');
     }
   }
 
@@ -142,42 +136,71 @@ class ViewDetailsController extends GetxController {
     return value.toString();
   }
 
+  // ==================== IMAGE PICKING METHODS ====================
+
   Future<void> pickImageFromCamera(BuildContext context) async {
+    print('📸 Picking image from camera...');
     try {
+      loadingMessage.value = 'Opening camera...'.tr;
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
       );
       if (pickedFile != null) {
         selectedImage.value = File(pickedFile.path);
+        print('✅ Image captured: ${pickedFile.path}');
         await uploadImage(context);
+      } else {
+        print('⚠️ No image captured');
+        loadingMessage.value = '';
       }
     } catch (e) {
+      print('❌ Failed to capture image: $e');
+      loadingMessage.value = '';
       _showError('Failed to capture image: $e', context);
     }
   }
 
   Future<void> pickImageFromGallery(BuildContext context) async {
+    print('🖼️ Picking image from gallery...');
     try {
+      loadingMessage.value = 'Opening gallery...'.tr;
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
       );
       if (pickedFile != null) {
         selectedImage.value = File(pickedFile.path);
+        print('✅ Image picked: ${pickedFile.path}');
         await uploadImage(context);
+      } else {
+        print('⚠️ No image selected');
+        loadingMessage.value = '';
       }
     } catch (e) {
+      print('❌ Failed to pick image: $e');
+      loadingMessage.value = '';
       _showError('Failed to pick image: $e', context);
     }
   }
 
+  // ==================== UPLOAD IMAGE FOR AI ANALYSIS ====================
+
   Future<void> uploadImage(BuildContext context) async {
-    if (selectedImage.value == null) return;
+    if (selectedImage.value == null) {
+      print('⚠️ No image selected');
+      return;
+    }
+
     try {
       isLoading.value = true;
+      loadingMessage.value = 'Analyzing image...'.tr;
+      print('🚀 Starting image upload for AI analysis...');
+
       final token = await _getToken();
       if (token == null) {
+        print('❌ No authentication token found');
+        loadingMessage.value = '';
         _showError('Authentication token not found', context);
         return;
       }
@@ -185,9 +208,10 @@ class ViewDetailsController extends GetxController {
       final cleanedToken = token.trim().replaceAll('"', '');
       final apiLang = selectedLanguage.value;
 
-      final uri = Uri.parse('$baseUrl/api/core/ai-analysis/?lang=$apiLang');
-      final request = http.MultipartRequest('POST', uri);
+      final uri = Uri.parse('${ApiConstants.aiAnalysis}?lang=$apiLang');
+      print('🌐 API URL: $uri');
 
+      final request = http.MultipartRequest('POST', uri);
       request.headers.addAll({'Authorization': 'Bearer $cleanedToken'});
       request.files.add(
         await http.MultipartFile.fromPath('image', selectedImage.value!.path),
@@ -196,32 +220,48 @@ class ViewDetailsController extends GetxController {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
+      print('📥 Response status code: ${response.statusCode}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonData = json.decode(response.body);
+        print('✅ AI Analysis successful!');
+
+        loadingMessage.value = 'Processing medication data...'.tr;
+        await Future.delayed(const Duration(milliseconds: 500)); // Small delay for UX
+
         if (jsonData is Map<String, dynamic>) {
           final sanitizedData = _sanitizeApiResponse(jsonData);
           medicationData.value = MedicationPreviewModel.fromJson(sanitizedData);
           refreshUI.value++;
+
+          print('💊 Medication detected: ${medicationData.value?.aiAnalysis.brandName}');
+          loadingMessage.value = '';
+
           if (context.mounted) {
-            context.push(
-              AppRoutes.medicineDetailPage,
-              extra: medicationData.value,
-            );
+            context.push(AppRoutes.medicineDetailPage, extra: medicationData.value);
           }
         }
       } else if (response.statusCode == 401 || response.statusCode == 403) {
+        print('❌ Unauthorized - Status: ${response.statusCode}');
+        loadingMessage.value = '';
         _showError('Unauthorized — please log in again', context);
       } else {
+        print('❌ Upload failed with status: ${response.statusCode}');
+        loadingMessage.value = '';
         _showError('Failed to upload image (${response.statusCode})', context);
       }
     } catch (e) {
+      print('❌ Upload error: $e');
+      loadingMessage.value = '';
       _showError('Failed to upload image: $e', context);
     } finally {
       isLoading.value = false;
+      print('🏁 Upload process completed');
     }
   }
 
   Map<String, dynamic> _sanitizeApiResponse(Map<String, dynamic> data) {
+    print('🔧 Sanitizing API response...');
     final sanitized = Map<String, dynamic>.from(data);
 
     if (sanitized['ai_analysis'] is Map<String, dynamic>) {
@@ -235,15 +275,11 @@ class ViewDetailsController extends GetxController {
       analysis['uses'] = _toStringValue(analysis['uses']);
       analysis['how_to_take'] = _toStringValue(analysis['how_to_take']);
       analysis['warnings'] = _toStringValue(analysis['warnings']);
-      analysis['storage_instructions'] = _toStringValue(
-        analysis['storage_instructions'],
-      );
+      analysis['storage_instructions'] = _toStringValue(analysis['storage_instructions']);
       analysis['interactions'] = _toStringValue(analysis['interactions']);
 
       if (analysis['dosage_information'] is Map<String, dynamic>) {
-        final dosage = Map<String, dynamic>.from(
-          analysis['dosage_information'],
-        );
+        final dosage = Map<String, dynamic>.from(analysis['dosage_information']);
         dosage['adults_dosage'] = _toStringValue(dosage['adults_dosage']);
         dosage['children_dosage'] = _toStringValue(dosage['children_dosage']);
         dosage['elderly_dosage'] = _toStringValue(dosage['elderly_dosage']);
@@ -260,17 +296,22 @@ class ViewDetailsController extends GetxController {
       sanitized['ai_analysis'] = analysis;
     }
 
+    print('✅ Response sanitized successfully');
     return sanitized;
   }
 
+  // ==================== LANGUAGE CHANGE ====================
+
   Future<void> changeLanguage(String displayName, BuildContext context) async {
+    print('🌍 Changing language to: $displayName');
+
     try {
       isLoading.value = true;
+      loadingMessage.value = 'Changing language...'.tr;
 
       if (_globalLanguageController != null) {
         await _globalLanguageController!.changeLanguage(displayName);
-        final langCode =
-            _globalLanguageController!.languageMap[displayName] ?? 'en';
+        final langCode = _globalLanguageController!.languageMap[displayName] ?? 'en';
         selectedLanguage.value = langCode;
       } else {
         final langCode = languageMap[displayName] ?? 'en';
@@ -279,8 +320,7 @@ class ViewDetailsController extends GetxController {
         selectedLanguage.value = langCode;
       }
 
-      final langCode = selectedLanguage.value;
-
+      print('✅ Language changed to: ${selectedLanguage.value}');
       await _setTtsLanguage();
 
       if (isPlaying.value) {
@@ -288,17 +328,23 @@ class ViewDetailsController extends GetxController {
         isPlaying.value = false;
       }
 
+      // ✅ শুধু যদি ইমেজ থাকে তাহলে রি-অ্যানালাইসিস করবে
       if (selectedImage.value != null) {
+        loadingMessage.value = 'Re-analyzing with new language...'.tr;
+        print('🔄 Re-analyzing image with new language...');
+
         final token = await _getToken();
         if (token == null) {
+          loadingMessage.value = '';
           _showError('Authentication token not found', context);
           return;
         }
 
         final cleanedToken = token.trim().replaceAll('"', '');
-        final uri = Uri.parse('$baseUrl/api/core/ai-analysis/?lang=$langCode');
-        final request = http.MultipartRequest('POST', uri);
+        final langCode = selectedLanguage.value;
 
+        final uri = Uri.parse('${ApiConstants.aiAnalysis}?lang=$langCode');
+        final request = http.MultipartRequest('POST', uri);
         request.headers.addAll({'Authorization': 'Bearer $cleanedToken'});
         request.files.add(
           await http.MultipartFile.fromPath('image', selectedImage.value!.path),
@@ -311,19 +357,22 @@ class ViewDetailsController extends GetxController {
           final decoded = jsonDecode(response.body);
           if (decoded is Map<String, dynamic>) {
             final sanitizedData = _sanitizeApiResponse(decoded);
-            medicationData.value = MedicationPreviewModel.fromJson(
-              sanitizedData,
-            );
+            medicationData.value = MedicationPreviewModel.fromJson(sanitizedData);
             refreshUI.value++;
+            print('✅ Re-analysis successful');
           }
         } else {
-          _showError(
-            'Failed to re-analyze in $langCode (${response.statusCode})',
-            context,
-          );
+          print('❌ Re-analysis failed with status: ${response.statusCode}');
+          _showError('Failed to re-analyze in $langCode', context);
         }
       }
+
+      loadingMessage.value = '';
+      _showSuccess('Language changed successfully', context);
+
     } catch (e) {
+      print('❌ Language change error: $e');
+      loadingMessage.value = '';
       _showError('Failed to change language: $e', context);
     } finally {
       isLoading.value = false;
@@ -331,34 +380,83 @@ class ViewDetailsController extends GetxController {
   }
 
   void updateGlobalLanguage(String langCode) {
+    print('🌍 Updating global language to: $langCode');
     selectedLanguage.value = langCode;
     _setTtsLanguage();
   }
 
+  // ==================== NOTES ====================
+
   Future<void> saveNotes(BuildContext context) async {
-    if (medicationData.value?.previewId == null || notes.value.isEmpty) return;
+    if (medicationData.value?.previewId == null) {
+      print('⚠️ Cannot save notes: No preview ID');
+      return;
+    }
+
+    if (notes.value.isEmpty) {
+      print('⚠️ Cannot save notes: Note is empty');
+      return;
+    }
+
+    print('📝 Saving note...');
+    print('📝 Preview ID: ${medicationData.value!.previewId}');
 
     try {
       final token = await _getToken();
-      if (token == null) return;
+      if (token == null) {
+        print('❌ Cannot save notes: No token');
+        return;
+      }
 
-      await http
-          .post(
-        Uri.parse('${baseUrl}/core/notes/'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'preview_id': medicationData.value!.previewId,
-          'note': notes.value,
-        }),
-      )
-          .timeout(const Duration(seconds: 15));
+      final url = Uri.parse(ApiConstants.notes);
+      print('🌐 Notes API URL: $url');
+
+      // ✅ Retry mechanism for notes
+      const maxRetries = 3;
+      int retryCount = 0;
+      bool success = false;
+
+      while (retryCount < maxRetries && !success) {
+        if (retryCount > 0) {
+          print('🔄 Note save retry ${retryCount + 1}/$maxRetries...');
+          await Future.delayed(const Duration(milliseconds: 800));
+        }
+
+        final response = await http.post(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({
+            'preview_id': medicationData.value!.previewId,
+            'note': notes.value,
+          }),
+        ).timeout(const Duration(seconds: 15));
+
+        print('📥 Notes save response status: ${response.statusCode}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          success = true;
+          print('✅ Note saved successfully');
+        } else if (response.statusCode == 404) {
+          print('⚠️ Preview not ready, retrying...');
+          retryCount++;
+        } else {
+          print('❌ Failed to save note: ${response.statusCode}');
+          break;
+        }
+      }
+
+      if (!success) {
+        print('⚠️ Could not save note after $maxRetries attempts');
+      }
     } catch (e) {
       print('❌ Error saving notes: $e');
     }
   }
+
+  // ==================== TTS (TEXT TO SPEECH) ====================
 
   String _getTextToSpeak() {
     final data = medicationData.value;
@@ -424,65 +522,184 @@ class ViewDetailsController extends GetxController {
     }
   }
 
+  // ==================== SAVE MEDICATION (WITH PROPER LOADING AND RETRY) ====================
+
   Future<void> saveMedication(BuildContext context) async {
     if (medicationData.value?.previewId == null) {
       _showError('No medication data to save.', context);
       return;
     }
 
+    // ✅ Prevent multiple save attempts
+    if (isSaving.value) {
+      print('⚠️ Save already in progress');
+      return;
+    }
+
     try {
-      isLoading.value = true;
-      await saveNotes(context);
+      isSaving.value = true;
+      loadingMessage.value = 'Preparing to save medication...'.tr;
+
+      print('💾 Starting save medication process...');
+      print('💊 Preview ID: ${medicationData.value!.previewId}');
+
+      // ✅ Initial delay for server to be ready
+      await Future.delayed(const Duration(seconds: 1));
+
+      loadingMessage.value = 'Saving medication, please wait...'.tr;
+
+      // ✅ Save note if exists
+      if (notes.value.isNotEmpty) {
+        print('📝 Saving note before medication...');
+        loadingMessage.value = 'Saving your note...'.tr;
+        await saveNotes(context);
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+
+      loadingMessage.value = 'Saving to cloud...'.tr;
+      loadingMessage.value = 'Please wait...'.tr;
 
       final token = await _getToken();
       if (token == null) {
+        loadingMessage.value = '';
         _showError('Authentication token not found', context);
         return;
       }
 
-      final url = Uri.parse(
-        '${baseUrl.endsWith("/") ? baseUrl : "$baseUrl/"}api/core/save-ai-analysis/',
-      );
+      final url = Uri.parse(ApiConstants.saveAiAnalysis);
+      print('🌐 Save medication API URL: $url');
 
-      final response = await http
-          .post(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({'preview_id': medicationData.value!.previewId}),
-      )
-          .timeout(const Duration(seconds: 15));
+      final requestBody = json.encode({
+        'preview_id': medicationData.value!.previewId,
+      });
+      print('📤 Request body: $requestBody');
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (context.mounted) context.pop();
-      } else {
-        _showError('Failed to save medication', context);
+      // ✅ Retry mechanism - 3 attempts with delays
+      const maxRetries = 3;
+      int retryCount = 0;
+      bool success = false;
+      http.Response? lastResponse;
+
+      while (retryCount < maxRetries && !success) {
+        if (retryCount > 0) {
+          print('🔄 Save attempt ${retryCount + 1}/$maxRetries...');
+          loadingMessage.value = 'Retrying (${retryCount + 1}/$maxRetries)...'.tr;
+          await Future.delayed(const Duration(milliseconds: 800));
+        }
+
+        final response = await http.post(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: requestBody,
+        ).timeout(const Duration(seconds: 30));
+
+        print('📥 Save attempt ${retryCount + 1} - Status: ${response.statusCode}');
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          success = true;
+          print('✅ Medication saved successfully!');
+          loadingMessage.value = 'Success!'.tr;
+          await Future.delayed(const Duration(milliseconds: 500));
+          _showSuccess('Medication saved successfully!', context);
+
+          if (context.mounted) {
+            print('🏠 Navigating to home page...');
+            loadingMessage.value = '';
+            context.go(AppRoutes.homeViewPage);
+          }
+          return;
+        } else {
+          lastResponse = response;
+          retryCount++;
+        }
       }
+
+      // All retries failed
+      if (lastResponse != null && !success) {
+        print('❌ All save attempts failed');
+        loadingMessage.value = '';
+        String errorMsg = 'Failed to save medication';
+        try {
+          final errorBody = json.decode(lastResponse.body);
+          if (errorBody['error'] != null) {
+            errorMsg = errorBody['error'];
+          }
+        } catch (e) {}
+        _showError(errorMsg, context);
+      }
+
     } catch (e) {
-      _showError('Failed to save medication: $e', context);
+      print('❌ Save error: $e');
+      loadingMessage.value = '';
+      _showError('Failed to save medication. Please try again.', context);
     } finally {
-      isLoading.value = false;
+      isSaving.value = false;
+      loadingMessage.value = '';
+      print('🏁 Save medication process completed');
     }
   }
 
-  void updateNotes(String value) => notes.value = value;
+  void updateNotes(String value) {
+    notes.value = value;
+    print('📝 Note updated: ${value.substring(0, value.length > 50 ? 50 : value.length)}...');
+  }
 
   AiAnalysis? get currentAnalysis => medicationData.value?.aiAnalysis;
 
   String get currentImageUrl {
     final medVal = medicationData.value;
     final url = medVal?.uploadedImage?.url;
-    return url != null ? '$baseUrl$url' : '';
+    final fullUrl = url != null ? '${ApiConstants.baseUrl}$url' : '';
+    return fullUrl;
   }
 
-  // ✅ _showError method with 2 parameters
-  void _showError(String message, BuildContext context) {
+  // ==================== LOADING STATUS GETTERS ====================
+
+  bool get isAnalyzing => isLoading.value;
+  bool get isSavingData => isSaving.value;
+  String get getLoadingMessage => loadingMessage.value;
+  bool get hasLoadingMessage => loadingMessage.value.isNotEmpty;
+
+  // ==================== HELPER METHODS ====================
+
+  void _showSuccess(String message, BuildContext context) {
+    print('✅ Success: $message');
     if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showError(String message, BuildContext context) {
+    print('❌ Error: $message');
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.redAccent,
         duration: const Duration(seconds: 4),

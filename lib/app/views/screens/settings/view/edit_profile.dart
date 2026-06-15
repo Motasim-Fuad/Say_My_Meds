@@ -453,50 +453,71 @@ class _EditProfileState extends State<EditProfile> {
                     onPressed: profileController.isLoading.value
                         ? null
                         : () async {
-                            String newName = _nameController.text.trim();
-                            if (newName.isEmpty) {
-                              Get.snackbar('error'.tr, 'nameCannotBeEmpty'.tr);
-                              return;
-                            }
+                      String newName = _nameController.text.trim();
+                      if (newName.isEmpty) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Name cannot be empty'),
+                              backgroundColor: Colors.orange,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                        return;
+                      }
 
-                            bool success = await profileController
-                                .updateProfile(
-                                  newName: newName,
-                                  newImage: _image?.path,
-                                );
+                      bool success = await profileController.updateProfile(
+                        newName: newName,
+                        newImage: _image?.path,
+                      );
 
-                            if (success) {
-                              Get.snackbar('success'.tr, 'profileUpdated'.tr);
-                              Future.delayed(
-                                const Duration(milliseconds: 500),
-                                () {
-                                  context.go(AppRoutes.homeViewPage);
-                                },
-                              );
-                            } else {
-                              Get.snackbar(
-                                'error'.tr,
-                                'failedToUpdateProfile'.tr,
-                              );
-                            }
-                          },
+                      if (success) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${'success'.tr}: ${'profileUpdated'.tr}'),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                        Future.delayed(const Duration(milliseconds: 500), () {
+                          if (mounted) {
+                            context.go(AppRoutes.homeViewPage);
+                          }
+                        });
+                      } else {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${'error'.tr}: ${'failedToUpdateProfile'.tr}'),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      }
+                    },
                     child: profileController.isLoading.value
                         ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white,
+                        ),
+                      ),
+                    )
                         : Text(
-                            'saveChanges'.tr,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              color: Colors.white,
-                            ),
-                          ),
+                      'saveChanges'.tr,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 );
               }),

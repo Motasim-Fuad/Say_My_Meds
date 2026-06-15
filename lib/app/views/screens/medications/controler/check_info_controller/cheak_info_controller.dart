@@ -1,4 +1,4 @@
-// lib/app/views/screens/medications/controler/check_info_controller/cheak_info_controller.dart
+
 
 import 'dart:async';
 import 'package:get/get.dart';

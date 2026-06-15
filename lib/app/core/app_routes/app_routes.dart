@@ -16,8 +16,8 @@ import 'package:saymymeds/app/views/screens/settings/view/edit_profile.dart';
 import 'package:saymymeds/app/views/screens/settings/view/language_selection.dart';
 import 'package:saymymeds/app/views/screens/settings/view/setting_page.dart';
 import 'package:saymymeds/app/views/screens/splash/splash_screen.dart';
-import 'package:saymymeds/app/views/screens/view_details/medication_preview_model/medication_preview.dart';
-import 'package:saymymeds/app/views/screens/view_details/view_detils.dart';
+import 'package:saymymeds/app/views/screens/view_details/medication_preview_model/medication_model.dart';
+import 'package:saymymeds/app/views/screens/view_details/MedicineDetailPage.dart';
 import 'package:saymymeds/app/views/screens/welcome/weal_come_screen.dart';
 
 class AppRoutes {

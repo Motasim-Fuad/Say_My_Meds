@@ -9,7 +9,6 @@ import 'dart:convert';
 import 'package:saymymeds/app/views/screens/medications/controler/model/medication_api_model.dart';
 
 class MedicationController extends GetxController {
-  static const String baseUrl = ApiConstants.baseUrl + '/api/core';
   String mediaBaseUrlForImages = ApiConstants.baseUrl;
 
   final medications = <Results>[].obs;
@@ -113,32 +112,53 @@ class MedicationController extends GetxController {
       final token = await StorageHelper.getToken();
       if (token == null) {
         errorMessage.value = 'No authentication token found';
+        print('❌ No authentication token found');
+        isLoading.value = false;
         return;
       }
 
-      final url = '$baseUrl/medications/?lang=${selectedLanguage.value}';
+      // ✅ সঠিক URL - ApiConstants.medications ব্যবহার করুন
+      final url = '${ApiConstants.medications}?lang=${selectedLanguage.value}';
+      print('🌐 Fetching medications from: $url');
+
       final response = await http.get(
         Uri.parse(url),
-        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json'
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      print('📥 Response status code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print('📊 Response data keys: ${data.keys}');
+
         final model = MedicationApiModel.fromJson(data);
 
         if (model.results != null && model.results!.isNotEmpty) {
+          print('✅ Found ${model.results!.length} medications');
+
           for (var med in model.results!) {
             med.originalImage = _buildImageUrl(med.originalImage);
+            print('   📝 Medication: ${med.genericName} (ID: ${med.id})');
           }
           medications.value = model.results!;
+          print('✅ Medications list updated with ${medications.length} items');
         } else {
+          print('⚠️ No medications found in response');
+          medications.value = [];
           errorMessage.value = 'No medications available';
         }
       } else {
-        throw Exception('Failed: ${response.statusCode}');
+        print('❌ Failed to load medications: ${response.statusCode}');
+        print('❌ Response body: ${response.body}');
+        errorMessage.value = 'Failed to load medications: ${response.statusCode}';
       }
     } catch (e) {
-      errorMessage.value = e.toString();
+      print('❌ Error fetching medications: $e');
+      errorMessage.value = 'Error: $e';
       _showSnackbar('Error', 'Failed to load medications: $e');
     } finally {
       isLoading.value = false;
@@ -153,19 +173,29 @@ class MedicationController extends GetxController {
         return false;
       }
 
+      // ✅ সঠিক URL
+      final url = '${ApiConstants.medications}$medId/';
+      print('🗑️ Deleting medication: $url');
+
       final response = await http.delete(
-        Uri.parse('$baseUrl/medications/$medId/'),
+        Uri.parse(url),
         headers: {'Authorization': 'Bearer $token'},
       );
 
+      print('📥 Delete response status: ${response.statusCode}');
+
       if (response.statusCode == 200 || response.statusCode == 204) {
         medications.removeWhere((med) => med.id == medId);
+        print('✅ Medication deleted successfully');
         _showSnackbar('Success', 'Medication deleted');
         return true;
       } else {
-        throw Exception('Failed: ${response.statusCode}');
+        print('❌ Delete failed: ${response.statusCode}');
+        _showSnackbar('Error', 'Failed to delete medication');
+        return false;
       }
     } catch (e) {
+      print('❌ Delete error: $e');
       _showSnackbar('Error', 'Failed to delete medication');
       return false;
     }
@@ -204,12 +234,17 @@ class MedicationController extends GetxController {
   }
 
   List<Results> get filteredMedications {
-    if (searchQuery.value.isEmpty) return medications;
+    if (searchQuery.value.isEmpty) {
+      print('🔍 Showing all ${medications.length} medications');
+      return medications;
+    }
     final query = searchQuery.value.toLowerCase();
-    return medications.where((med) {
+    final filtered = medications.where((med) {
       return (med.genericName?.toLowerCase().contains(query) ?? false) ||
           (med.brandName?.toLowerCase().contains(query) ?? false);
     }).toList();
+    print('🔍 Filtered ${filtered.length} medications for query: $query');
+    return filtered;
   }
 
   Future<void> changeLanguage(String displayLang) async {
@@ -239,7 +274,12 @@ class MedicationController extends GetxController {
 
   void _showSnackbar(String title, String message) {
     if (Get.context != null) {
-      Get.snackbar(title, message, snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 3));
+      Get.snackbar(
+          title,
+          message,
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 3)
+      );
     }
   }
 }

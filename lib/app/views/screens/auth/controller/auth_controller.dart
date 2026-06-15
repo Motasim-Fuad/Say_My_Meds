@@ -20,6 +20,7 @@ class AuthController extends GetxController {
     required BuildContext context,
     required String email,
     required String password,
+    required bool rememberMe,  // Add this parameter
   }) async {
     if (email.isEmpty || password.isEmpty) {
       _showSnackBar(context, "Both Email and Password are required");
@@ -52,10 +53,8 @@ class AuthController extends GetxController {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        // Extract token from response
         String? accessToken;
 
-        // Check different possible token locations
         if (data["token"] != null) {
           if (data["token"] is Map) {
             accessToken = data["token"]["access"]?.toString();
@@ -71,16 +70,12 @@ class AuthController extends GetxController {
         print("🔑 Extracted Token: ${accessToken != null ? 'Found (${accessToken.length} chars)' : 'NOT FOUND'}");
 
         if (accessToken != null && accessToken.isNotEmpty) {
-          // Save token using StorageHelper
+          // Save token
           await StorageHelper.saveToken(accessToken);
+          // Save remember me preference
+          await StorageHelper.saveRememberMe(rememberMe);
 
-          // ✅ Verify token was saved
-          String? savedToken = await StorageHelper.getToken();
-          print("✅ Token saved successfully: ${savedToken != null ? 'YES' : 'NO'}");
-          if (savedToken != null) {
-            print("✅ Saved token length: ${savedToken.length}");
-            print("✅ Saved token preview: ${savedToken.substring(0, savedToken.length > 30 ? 30 : savedToken.length)}...");
-          }
+          print("✅ Remember me preference saved: $rememberMe");
         } else {
           print("❌ No token found in response!");
         }
@@ -322,12 +317,23 @@ class AuthController extends GetxController {
   // LOGOUT
   // ─────────────────────────────────────────────
   Future<void> logout(BuildContext context) async {
-    await StorageHelper.clearToken();
-    print("token clear success fully");
-    print("🚪 User logged out");
+    await StorageHelper.clearAllData();  // Clear all data
+    print("🚪 User logged out - all data cleared");
     if (context.mounted) {
       context.go(AppRoutes.siginIn);
     }
+  }
+
+  Future<bool> shouldAutoLogin() async {
+    bool rememberMe = await StorageHelper.getRememberMe();
+    if (!rememberMe) {
+      // If remember me is false, clear token and return false
+      await StorageHelper.clearToken();
+      return false;
+    }
+
+    String? token = await StorageHelper.getToken();
+    return token != null && token.isNotEmpty;
   }
 
   // ─────────────────────────────────────────────

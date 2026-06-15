@@ -4,6 +4,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:saymymeds/app/utlies/apps_color.dart';
+import 'package:saymymeds/app/utlies/storage_helper.dart';
 import 'package:saymymeds/app/views/components/AppHeadingText/app_hedaing_text.dart';
 import 'package:saymymeds/app/views/components/AppSubtitleText/app_subtitle_text.dart';
 import 'package:saymymeds/app/views/components/CustomButton/custom_button.dart';
@@ -25,6 +26,19 @@ class _SiginInViewsState extends State<SiginInViews> {
 
   bool rememberMe = false;
   bool isPasswordVisible = false;
+
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberMePreference();
+  }
+  Future<void> _loadRememberMePreference() async {
+    bool savedPreference = await StorageHelper.getRememberMe();
+    setState(() {
+      rememberMe = savedPreference;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,23 +122,18 @@ class _SiginInViewsState extends State<SiginInViews> {
                           });
                         },
                         activeColor: const Color(0xFF5B9BD5),
-                        // materialTapTargetSize: materialTapTargetSize.shri,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         visualDensity: VisualDensity.compact,
                       ),
-
                       const Text(
                         'Remember me',
                         style: TextStyle(
                           fontFamily: 'Open Sans',
                           color: Color(0xFF848484),
-                          fontWeight: FontWeight.w600, // SemiBold
-                          fontStyle: FontStyle
-                              .normal, // SemiBold has no specific font-style in Flutter
+                          fontWeight: FontWeight.w600,
                           fontSize: 18.0,
-                          height:
-                              1.0, // 100% line-height (this is the same as line-height: 100%)
-                          letterSpacing: 0.0, // 0% letter-spacing
+                          height: 1.0,
+                          letterSpacing: 0.0,
                         ),
                       ),
                     ],
@@ -167,20 +176,6 @@ class _SiginInViewsState extends State<SiginInViews> {
               ),
               SizedBox(height: 25),
 
-              // here of this screen login
-              // CustomButton(
-              //   backgroundColor: AppColors.buttonColor,
-              //   child: Text(
-              //     "Login",
-              //     style: GoogleFonts.poppins(
-              //       color: Colors.white,
-              //       fontSize: 16,
-              //       fontWeight: FontWeight.w600,
-              //       height: 1.0,
-              //     ),
-              //   ),
-              //   onPressed: () {},
-              // ),
               Obx(
                 () => CustomButton(
                   backgroundColor: AppColors.buttonColor,
@@ -191,6 +186,7 @@ class _SiginInViewsState extends State<SiginInViews> {
                             context: context,
                             email: emailController.text.trim(),
                             password: passwordController.text.trim(),
+                            rememberMe: rememberMe,
                           );
                         },
                   child: authController.isLoading.value

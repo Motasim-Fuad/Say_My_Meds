@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:saymymeds/app/core/app_routes/app_routes.dart';
 import 'package:saymymeds/app/utlies/apps_color.dart';
+import 'package:saymymeds/app/views/screens/auth/controller/auth_controller.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,11 +16,24 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _checkAutoLogin();
+  }
 
-    // Delay function to navigate to the next screen after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      context.go('/welcome'); // '/welcome' is your route path in go_router
-    });
+  Future<void> _checkAutoLogin() async {
+    await Future.delayed(const Duration(seconds: 3));
+
+    // Check if user should auto-login
+    bool shouldAutoLogin = await AuthController().shouldAutoLogin();
+
+    if (mounted) {
+      if (shouldAutoLogin) {
+        // User has remember me checked and valid token, go directly to home
+        context.go(AppRoutes.homeViewPage);
+      } else {
+        // User needs to login
+        context.go('/welcome');
+      }
+    }
   }
 
   @override
@@ -26,22 +41,17 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: AppColors.whiteBackground,
       body: SingleChildScrollView(
-        // Wrap the body with SingleChildScrollView
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Ensure the image path is correct
               Image.asset(
                 "assets/images/logo.png",
                 height: 572.h,
                 width: 572.w,
-                // fit: BoxFit.cover,
               ),
-
               SizedBox(height: 20.h),
-
               Text(
                 "Say My Meds",
                 style: TextStyle(

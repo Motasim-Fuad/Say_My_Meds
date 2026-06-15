@@ -294,15 +294,24 @@ class _SettingPageState extends State<SettingPage> {
         return;
       }
 
+      // Log the URL for debugging
+      print('Delete Account URL: ${ApiConstants.deleteAccount}');
+      print('Token: $token');
+
       final response = await http.delete(
         Uri.parse(ApiConstants.deleteAccount),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
+          'Accept': 'application/json', // Add this to request JSON response
         },
       ).timeout(const Duration(seconds: 30));
 
       if (context.mounted) Navigator.pop(context);
+
+      // Log the response for debugging
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         _showSnackbar('Success', 'Account deleted successfully');
@@ -312,15 +321,31 @@ class _SettingPageState extends State<SettingPage> {
         }
       } else {
         String errorMsg = 'Failed to delete account';
-        try {
-          final errorBody = json.decode(response.body);
-          errorMsg = errorBody['error'] ?? errorBody['message'] ?? errorMsg;
-        } catch (e) {}
-        _showSnackbar('Error', errorMsg);
+
+        // Check if response is HTML
+        if (response.body.trim().startsWith('<!DOCTYPE') ||
+            response.body.trim().startsWith('<html')) {
+          errorMsg = 'Server error. Please check your API endpoint or try again later.';
+          print('Server returned HTML instead of JSON. Status code: ${response.statusCode}');
+        } else {
+          try {
+            final errorBody = json.decode(response.body);
+            errorMsg = errorBody['error'] ?? errorBody['message'] ?? errorMsg;
+          } catch (e) {
+            print('Error parsing JSON: $e');
+            errorMsg = 'Server error (Status: ${response.statusCode})';
+          }
+        }
+
+        if (context.mounted) {
+          _showSnackbar('Error', errorMsg);
+        }
+        print(errorMsg);
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
       _showSnackbar('Error', 'Failed to delete account: $e');
+      print('Exception: $e');
     }
   }
 

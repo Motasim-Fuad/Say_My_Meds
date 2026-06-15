@@ -10,7 +10,7 @@ class ApiConstants {
   static const String resendOtp = "$baseUrl/account/resend-otp/";
   static const String forgetPassword = "$baseUrl/account/send-reset-password-email/";
   static const String resetPasswordOtp = "$baseUrl/api/user/reset-password-otp/";
-  static const String deleteAccount = "$baseUrl/account/user/delete-account/";
+  static const String deleteAccount = "$baseUrl/accounts/user/delete-account/";
 
   /* API Endpoints */
   static const String medications = "$baseUrl/api/core/medications/";

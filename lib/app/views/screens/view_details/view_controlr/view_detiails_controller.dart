@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart'; // ✅ নতুন ইম্পোর্ট
 import 'package:saymymeds/app/core/app_routes/app_routes.dart';
 import 'package:saymymeds/app/core/consants/api_constants.dart';
 import 'package:saymymeds/app/utlies/storage_helper.dart';
@@ -136,206 +137,55 @@ class ViewDetailsController extends GetxController {
     return value.toString();
   }
 
-  // ==================== HELPER: FIND TRANSLATED FIELDS ====================
+  // ==================== ✅ NEW: IMAGE COMPRESSION METHOD ====================
 
-  String? _findField(Map<String, dynamic> data, List<String> possibleKeys) {
-    for (var key in possibleKeys) {
-      if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
-        return data[key].toString();
+  /// Compress image to reduce file size before upload
+  /// Returns compressed File or original if compression fails
+  Future<File> _compressImage(File imageFile) async {
+    try {
+      print('🔄 Compressing image...');
+
+      // Get original file size
+      final originalSize = await imageFile.length();
+      print('📊 Original size: ${(originalSize / 1024).toStringAsFixed(1)} KB');
+
+      // Create compressed file path
+      final filePath = imageFile.absolute.path;
+      final lastDot = filePath.lastIndexOf('.');
+      final extension = filePath.substring(lastDot);
+      final nameWithoutExt = filePath.substring(0, lastDot);
+      final compressedPath = '${nameWithoutExt}_compressed$extension';
+
+      // Compress with quality 70 (good balance between quality and size)
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        filePath,
+        compressedPath,
+        quality: 70,
+        rotate: 0,
+      );
+
+      if (compressedFile == null) {
+        print('⚠️ Compression failed, using original file');
+        return imageFile;
       }
+
+      // Get compressed file size
+      final compressedSize = await compressedFile.length();
+      print('📊 Compressed size: ${(compressedSize / 1024).toStringAsFixed(1)} KB');
+      print('📊 Compression ratio: ${((1 - compressedSize / originalSize) * 100).toStringAsFixed(1)}%');
+
+      // If compression didn't reduce size significantly, use original
+      if (compressedSize >= originalSize) {
+        print('⚠️ Compression didn\'t reduce size, using original');
+        return imageFile;
+      }
+
+      // Return compressed file as File
+      return File(compressedPath);
+    } catch (e) {
+      print('❌ Compression error: $e');
+      return imageFile; // Return original on error
     }
-    return null;
-  }
-
-  Map<String, dynamic> _findNestedField(Map<String, dynamic> data, List<String> possibleKeys) {
-    for (var key in possibleKeys) {
-      if (data.containsKey(key) && data[key] is Map<String, dynamic>) {
-        return Map<String, dynamic>.from(data[key]);
-      }
-    }
-    return {};
-  }
-
-  Map<String, dynamic> _extractTranslatedFields(Map<String, dynamic> data) {
-    print('🔍 Extracting translated fields...');
-    Map<String, dynamic> result = {};
-
-    // Generic Name
-    String? genericName = _findField(data, [
-      'generic_name', 'nombre_generico', 'nom_generique',
-      'nome_generico', 'non_jenerik', 'генерическое_название',
-      '通用名', 'genericName'
-    ]);
-    if (genericName != null) result['generic_name'] = genericName;
-
-    // Brand Name
-    String? brandName = _findField(data, [
-      'brand_name', 'nombre_marca', 'nom_marque',
-      'nome_marca', 'non_mak', 'торговое_название',
-      '品牌名称', 'brandName'
-    ]);
-    if (brandName != null) result['brand_name'] = brandName;
-
-    // Manufacturer
-    String? manufacturer = _findField(data, [
-      'manufacturer', 'fabricante', 'fabricant',
-      'fabricante', 'fabrikant', 'производитель',
-      '制造商'
-    ]);
-    if (manufacturer != null) result['manufacturer'] = manufacturer;
-
-    // Drug Class
-    String? drugClass = _findField(data, [
-      'drug_class', 'clase_medicamento', 'classe_medicament',
-      'classe_medicamento', 'klas_medikaman', 'класс_препарата',
-      '药物类别'
-    ]);
-    if (drugClass != null) result['drug_class'] = drugClass;
-
-    // Uses
-    String? uses = _findField(data, [
-      'uses', 'usos', 'utilisations',
-      'usos', 'itilizasyon', 'применение',
-      '用途'
-    ]);
-    if (uses != null) result['uses'] = uses;
-
-    // How to Take
-    String? howToTake = _findField(data, [
-      'how_to_take', 'como_tomar', 'comment_prendre',
-      'como_tomar', 'kijan_pou_pran', 'как_принимать',
-      '如何服用'
-    ]);
-    if (howToTake != null) result['how_to_take'] = howToTake;
-
-    // Warnings
-    String? warnings = _findField(data, [
-      'warnings', 'advertencias', 'avertissements',
-      'avisos', 'avis', 'предупреждения',
-      '警告'
-    ]);
-    if (warnings != null) result['warnings'] = warnings;
-
-    // Storage Instructions
-    String? storageInstructions = _findField(data, [
-      'storage_instructions', 'instrucciones_almacenamiento', 'instructions_stockage',
-      'instrucoes_armazenamento', 'enstriksyon_stokaj', 'инструкции_хранению',
-      '存储说明'
-    ]);
-    if (storageInstructions != null) result['storage_instructions'] = storageInstructions;
-
-    // Interactions
-    String? interactions = _findField(data, [
-      'interactions', 'interacciones', 'interactions',
-      'interacoes', 'entèraksyon', 'взаимодействия',
-      '相互作用'
-    ]);
-    if (interactions != null) result['interactions'] = interactions;
-
-    // Tot Pills
-    String? totPills = _findField(data, [
-      'tot_pills', 'total_pastillas', 'total_comprimes',
-      'total_pilulas', 'total_gelil', 'всего_таблеток',
-      '总药片'
-    ]);
-    if (totPills != null) result['tot_pills'] = totPills;
-
-    // Dosage Information - find nested
-    Map<String, dynamic> dosageData = _findNestedField(data, [
-      'dosage_information', 'informacion_dosificacion', 'information_dosage',
-      'informacao_dosagem', 'enfomason_dosaj', 'информация_дозировки',
-      '给药信息'
-    ]);
-
-    if (dosageData.isNotEmpty) {
-      Map<String, dynamic> dosage = {};
-
-      String? adultsDosage = _findField(dosageData, [
-        'adults_dosage', 'dosificacion_adultos', 'dosage_adultes',
-        'dosagem_adultos', 'dosaj_granmoun', 'дозировка_взрослых',
-        '成人用量'
-      ]);
-      if (adultsDosage != null) dosage['adults_dosage'] = adultsDosage;
-
-      String? childrenDosage = _findField(dosageData, [
-        'children_dosage', 'dosificacion_ninos', 'dosage_enfants',
-        'dosagem_criancas', 'dosaj_timoun', 'дозировка_детей',
-        '儿童用量'
-      ]);
-      if (childrenDosage != null) dosage['children_dosage'] = childrenDosage;
-
-      String? elderlyDosage = _findField(dosageData, [
-        'elderly_dosage', 'dosificacion_ancianos', 'dosage_personnes_agees',
-        'dosagem_idosos', 'dosaj_moun_vye', 'дозировка_пожилых',
-        '老年人用量'
-      ]);
-      if (elderlyDosage != null) dosage['elderly_dosage'] = elderlyDosage;
-
-      if (dosage.isNotEmpty) {
-        result['dosage_information'] = dosage;
-      }
-    }
-
-    // Side Effects - find nested
-    Map<String, dynamic> sideEffectsData = _findNestedField(data, [
-      'side_effects', 'efectos_secundarios', 'effets_secondaires',
-      'efeitos_colaterais', 'efet_segondè', 'побочные_эффекты',
-      '副作用'
-    ]);
-
-    if (sideEffectsData.isNotEmpty) {
-      Map<String, dynamic> sideEffects = {};
-
-      String? common = _findField(sideEffectsData, [
-        'common', 'comunes', 'courants',
-        'comuns', 'ordinè', 'частые',
-        '常见'
-      ]);
-      if (common != null) sideEffects['common'] = common;
-
-      String? serious = _findField(sideEffectsData, [
-        'serious', 'graves', 'graves',
-        'graves', 'grav', 'серьезные',
-        '严重'
-      ]);
-      if (serious != null) sideEffects['serious'] = serious;
-
-      if (sideEffects.isNotEmpty) {
-        result['side_effects'] = sideEffects;
-      }
-    }
-
-    return result;
-  }
-
-  Map<String, dynamic> _createEmptyResponse() {
-    return {
-      'preview_id': '',
-      'language': 'en',
-      'uploaded_image': {'filename': '', 'url': ''},
-      'audio_urls': {'en': '', 'es': '', 'fr': '', 'pt': '', 'ht': '', 'zh-CN': '', 'ru': ''},
-      'ai_analysis': {
-        'tot_pills': '',
-        'generic_name': 'Unknown',
-        'brand_name': 'Unknown',
-        'manufacturer': '',
-        'drug_class': '',
-        'uses': '',
-        'how_to_take': '',
-        'warnings': '',
-        'storage_instructions': '',
-        'interactions': '',
-        'dosage_information': {
-          'adults_dosage': '',
-          'children_dosage': '',
-          'elderly_dosage': '',
-        },
-        'side_effects': {
-          'common': '',
-          'serious': '',
-        },
-      }
-    };
   }
 
   // ==================== IMAGE PICKING METHODS ====================
@@ -346,7 +196,9 @@ class ViewDetailsController extends GetxController {
       loadingMessage.value = 'Opening camera...'.tr;
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 85,
+        maxWidth: 2000,     // ✅ Limit width to reduce size
+        maxHeight: 2000,    // ✅ Limit height to reduce size
+        imageQuality: 80,   // ✅ Already compressing from picker
       );
       if (pickedFile != null) {
         selectedImage.value = File(pickedFile.path);
@@ -369,7 +221,9 @@ class ViewDetailsController extends GetxController {
       loadingMessage.value = 'Opening gallery...'.tr;
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
+        maxWidth: 2000,     // ✅ Limit width to reduce size
+        maxHeight: 2000,    // ✅ Limit height to reduce size
+        imageQuality: 80,   // ✅ Already compressing from picker
       );
       if (pickedFile != null) {
         selectedImage.value = File(pickedFile.path);
@@ -398,8 +252,15 @@ class ViewDetailsController extends GetxController {
 
     try {
       isLoading.value = true;
-      loadingMessage.value = 'Analyzing image...'.tr;
+      loadingMessage.value = 'Processing image...'.tr;
       print('🚀 Starting image upload for AI analysis...');
+
+      // ✅ COMPRESS IMAGE BEFORE UPLOAD
+      final originalFile = selectedImage.value!;
+      final compressedFile = await _compressImage(originalFile);
+
+      // Update selected image with compressed version
+      selectedImage.value = compressedFile;
 
       final token = await _getToken();
       if (token == null) {
@@ -420,8 +281,10 @@ class ViewDetailsController extends GetxController {
 
       final request = http.MultipartRequest('POST', uri);
       request.headers.addAll({'Authorization': 'Bearer $cleanedToken'});
+
+      // ✅ Use compressed file for upload
       request.files.add(
-        await http.MultipartFile.fromPath('image', selectedImage.value!.path),
+        await http.MultipartFile.fromPath('image', compressedFile.path),
       );
 
       loadingMessage.value = 'AI is analyzing the image...'.tr;
@@ -456,6 +319,11 @@ class ViewDetailsController extends GetxController {
             _showError('Could not detect medication in image'.tr, context);
           }
         }
+      } else if (response.statusCode == 413) {
+        // ✅ Specific handling for 413 error
+        print('❌ Image too large (413) - Even after compression');
+        loadingMessage.value = '';
+        _showError('Image is still too large. Please use a smaller image.'.tr, context);
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         print('❌ Unauthorized - Status: ${response.statusCode}');
         loadingMessage.value = '';
@@ -586,7 +454,6 @@ class ViewDetailsController extends GetxController {
       }
 
       print('✅ Language changed to: ${selectedLanguage.value}');
-      // উদাহরণ: changeLanguage মেথডের ভিতরে
       await debugFetchMedicationWithLanguage(8, 'zh-CN');
       await _setTtsLanguage();
 
@@ -615,8 +482,12 @@ class ViewDetailsController extends GetxController {
         try {
           final request = http.MultipartRequest('POST', uri);
           request.headers.addAll({'Authorization': 'Bearer $cleanedToken'});
+
+          // ✅ Use compressed image for re-analysis
+          final imageFile = selectedImage.value!;
+          final compressedFile = await _compressImage(imageFile);
           request.files.add(
-            await http.MultipartFile.fromPath('image', selectedImage.value!.path),
+            await http.MultipartFile.fromPath('image', compressedFile.path),
           );
 
           final streamedResponse = await request.send();
@@ -700,7 +571,6 @@ class ViewDetailsController extends GetxController {
         print(jsonData);
       } else {
         print('❌ DEBUG: Failed to fetch data. Status: ${response.statusCode}');
-        // Try to print error message from response
         try {
           final errorData = jsonDecode(response.body);
           print('❌ DEBUG: Error Response: $errorData');
@@ -1043,5 +913,195 @@ class ViewDetailsController extends GetxController {
         duration: const Duration(seconds: 4),
       ),
     );
+  }
+
+  // ==================== PRIVATE METHODS ====================
+
+  Map<String, dynamic> _createEmptyResponse() {
+    return {
+      'preview_id': '',
+      'language': 'en',
+      'uploaded_image': {'filename': '', 'url': ''},
+      'audio_urls': {'en': '', 'es': '', 'fr': '', 'pt': '', 'ht': '', 'zh-CN': '', 'ru': ''},
+      'ai_analysis': {
+        'tot_pills': '',
+        'generic_name': 'Unknown',
+        'brand_name': 'Unknown',
+        'manufacturer': '',
+        'drug_class': '',
+        'uses': '',
+        'how_to_take': '',
+        'warnings': '',
+        'storage_instructions': '',
+        'interactions': '',
+        'dosage_information': {
+          'adults_dosage': '',
+          'children_dosage': '',
+          'elderly_dosage': '',
+        },
+        'side_effects': {
+          'common': '',
+          'serious': '',
+        },
+      }
+    };
+  }
+
+  String? _findField(Map<String, dynamic> data, List<String> possibleKeys) {
+    for (var key in possibleKeys) {
+      if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
+        return data[key].toString();
+      }
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _findNestedField(Map<String, dynamic> data, List<String> possibleKeys) {
+    for (var key in possibleKeys) {
+      if (data.containsKey(key) && data[key] is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(data[key]);
+      }
+    }
+    return {};
+  }
+
+  Map<String, dynamic> _extractTranslatedFields(Map<String, dynamic> data) {
+    print('🔍 Extracting translated fields...');
+    Map<String, dynamic> result = {};
+
+    String? genericName = _findField(data, [
+      'generic_name', 'nombre_generico', 'nom_generique',
+      'nome_generico', 'non_jenerik', 'генерическое_название',
+      '通用名', 'genericName'
+    ]);
+    if (genericName != null) result['generic_name'] = genericName;
+
+    String? brandName = _findField(data, [
+      'brand_name', 'nombre_marca', 'nom_marque',
+      'nome_marca', 'non_mak', 'торговое_название',
+      '品牌名称', 'brandName'
+    ]);
+    if (brandName != null) result['brand_name'] = brandName;
+
+    String? manufacturer = _findField(data, [
+      'manufacturer', 'fabricante', 'fabricant',
+      'fabricante', 'fabrikant', 'производитель',
+      '制造商'
+    ]);
+    if (manufacturer != null) result['manufacturer'] = manufacturer;
+
+    String? drugClass = _findField(data, [
+      'drug_class', 'clase_medicamento', 'classe_medicament',
+      'classe_medicamento', 'klas_medikaman', 'класс_препарата',
+      '药物类别'
+    ]);
+    if (drugClass != null) result['drug_class'] = drugClass;
+
+    String? uses = _findField(data, [
+      'uses', 'usos', 'utilisations',
+      'usos', 'itilizasyon', 'применение',
+      '用途'
+    ]);
+    if (uses != null) result['uses'] = uses;
+
+    String? howToTake = _findField(data, [
+      'how_to_take', 'como_tomar', 'comment_prendre',
+      'como_tomar', 'kijan_pou_pran', 'как_принимать',
+      '如何服用'
+    ]);
+    if (howToTake != null) result['how_to_take'] = howToTake;
+
+    String? warnings = _findField(data, [
+      'warnings', 'advertencias', 'avertissements',
+      'avisos', 'avis', 'предупреждения',
+      '警告'
+    ]);
+    if (warnings != null) result['warnings'] = warnings;
+
+    String? storageInstructions = _findField(data, [
+      'storage_instructions', 'instrucciones_almacenamiento', 'instructions_stockage',
+      'instrucoes_armazenamento', 'enstriksyon_stokaj', 'инструкции_хранению',
+      '存储说明'
+    ]);
+    if (storageInstructions != null) result['storage_instructions'] = storageInstructions;
+
+    String? interactions = _findField(data, [
+      'interactions', 'interacciones', 'interactions',
+      'interacoes', 'entèraksyon', 'взаимодействия',
+      '相互作用'
+    ]);
+    if (interactions != null) result['interactions'] = interactions;
+
+    String? totPills = _findField(data, [
+      'tot_pills', 'total_pastillas', 'total_comprimes',
+      'total_pilulas', 'total_gelil', 'всего_таблеток',
+      '总药片'
+    ]);
+    if (totPills != null) result['tot_pills'] = totPills;
+
+    Map<String, dynamic> dosageData = _findNestedField(data, [
+      'dosage_information', 'informacion_dosificacion', 'information_dosage',
+      'informacao_dosagem', 'enfomason_dosaj', 'информация_дозировки',
+      '给药信息'
+    ]);
+
+    if (dosageData.isNotEmpty) {
+      Map<String, dynamic> dosage = {};
+
+      String? adultsDosage = _findField(dosageData, [
+        'adults_dosage', 'dosificacion_adultos', 'dosage_adultes',
+        'dosagem_adultos', 'dosaj_granmoun', 'дозировка_взрослых',
+        '成人用量'
+      ]);
+      if (adultsDosage != null) dosage['adults_dosage'] = adultsDosage;
+
+      String? childrenDosage = _findField(dosageData, [
+        'children_dosage', 'dosificacion_ninos', 'dosage_enfants',
+        'dosagem_criancas', 'dosaj_timoun', 'дозировка_детей',
+        '儿童用量'
+      ]);
+      if (childrenDosage != null) dosage['children_dosage'] = childrenDosage;
+
+      String? elderlyDosage = _findField(dosageData, [
+        'elderly_dosage', 'dosificacion_ancianos', 'dosage_personnes_agees',
+        'dosagem_idosos', 'dosaj_moun_vye', 'дозировка_пожилых',
+        '老年人用量'
+      ]);
+      if (elderlyDosage != null) dosage['elderly_dosage'] = elderlyDosage;
+
+      if (dosage.isNotEmpty) {
+        result['dosage_information'] = dosage;
+      }
+    }
+
+    Map<String, dynamic> sideEffectsData = _findNestedField(data, [
+      'side_effects', 'efectos_secundarios', 'effets_secondaires',
+      'efeitos_colaterais', 'efet_segondè', 'побочные_эффекты',
+      '副作用'
+    ]);
+
+    if (sideEffectsData.isNotEmpty) {
+      Map<String, dynamic> sideEffects = {};
+
+      String? common = _findField(sideEffectsData, [
+        'common', 'comunes', 'courants',
+        'comuns', 'ordinè', 'частые',
+        '常见'
+      ]);
+      if (common != null) sideEffects['common'] = common;
+
+      String? serious = _findField(sideEffectsData, [
+        'serious', 'graves', 'graves',
+        'graves', 'grav', 'серьезные',
+        '严重'
+      ]);
+      if (serious != null) sideEffects['serious'] = serious;
+
+      if (sideEffects.isNotEmpty) {
+        result['side_effects'] = sideEffects;
+      }
+    }
+
+    return result;
   }
 }

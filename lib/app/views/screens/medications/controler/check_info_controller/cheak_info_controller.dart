@@ -401,6 +401,56 @@ class CheckInfoController extends GetxController {
     return text;
   }
 
+  // check_info_controller.dart - ডিবাগ মেথড যোগ করুন
+
+// ==================== DEBUG: FETCH AND PRINT FULL DATA ====================
+
+  Future<void> debugPrintFullData(int id, String langCode) async {
+    print('🐞 ===== DEBUG: CHECK INFO PAGE =====');
+    print('📌 Medication ID: $id');
+    print('📌 Language: $langCode');
+    print('=====================================');
+
+    try {
+      final token = await StorageHelper.getToken();
+      if (token == null) {
+        print('❌ No token found!');
+        return;
+      }
+
+      final url = '$apiCoreUrl/medications/$id/?lang=$langCode';
+      print('🌐 URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📥 Status Code: ${response.statusCode}');
+      print('📥 Full Response:');
+      print('=====================================');
+      print(response.body);
+      print('=====================================');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ Parsed JSON Keys: ${data.keys}');
+
+        if (data.containsKey('generic_name')) {
+          print('📄 generic_name: ${data['generic_name']}');
+        }
+        if (data.containsKey('通用名')) {
+          print('📄 通用名: ${data['通用名']}');
+        }
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+    }
+  }
+
   Future<void> toggleAudio() async {
     try {
       if (isPlaying.value) {

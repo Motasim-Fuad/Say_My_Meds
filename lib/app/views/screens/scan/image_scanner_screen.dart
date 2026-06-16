@@ -1,3 +1,5 @@
+// image_scanner_screen.dart - সম্পূর্ণ আপডেটেড
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
@@ -53,7 +55,7 @@ class _ImageScannerScreenState extends State<ImageScannerScreen> {
       ),
       backgroundColor: AppColors.whiteBackground,
       body: Obx(
-        () => Stack(
+            () => Stack(
           children: [
             SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
@@ -66,72 +68,72 @@ class _ImageScannerScreenState extends State<ImageScannerScreen> {
                   // Display selected image
                   controller.selectedImage.value != null
                       ? Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.grey.shade300,
-                              width: 2,
-                            ),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Builder(
-                              builder: (_) {
-                                final imgFile = controller.selectedImage.value;
-                                if (imgFile == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                if (!kIsWeb) {
-                                  return Image.file(
-                                    imgFile,
-                                    height: 200,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  );
-                                }
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                        width: 2,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Builder(
+                        builder: (_) {
+                          final imgFile = controller.selectedImage.value;
+                          if (imgFile == null) {
+                            return const SizedBox.shrink();
+                          }
+                          if (!kIsWeb) {
+                            return Image.file(
+                              imgFile,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            );
+                          }
 
-                                final path = imgFile.path;
-                                if (path.startsWith('http') ||
-                                    path.startsWith('https')) {
-                                  return Image.network(
-                                    path,
-                                    height: 200,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  );
-                                }
+                          final path = imgFile.path;
+                          if (path.startsWith('http') ||
+                              path.startsWith('https')) {
+                            return Image.network(
+                              path,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            );
+                          }
 
-                                return Container(
-                                  height: 200,
-                                  width: double.infinity,
-                                  color: Colors.grey[300],
-                                  child: const Center(
-                                    child: Text(
-                                      'Image preview not available on web',
-                                      style: TextStyle(color: Colors.grey),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        )
-                      : Container(
-                          height: 200,
-                          decoration: BoxDecoration(
+                          return Container(
+                            height: 200,
+                            width: double.infinity,
                             color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'No image selected',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
+                            child: const Center(
+                              child: Text(
+                                'Image preview not available on web',
+                                style: TextStyle(color: Colors.grey),
                               ),
                             ),
-                          ),
+                          );
+                        },
+                      ),
+                    ),
+                  )
+                      : Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'No image selected',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
                         ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 50),
 
                   // ✅ Capture / Gallery buttons with translations
@@ -166,7 +168,7 @@ class _ImageScannerScreenState extends State<ImageScannerScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'camera'.tr, // ✅ Translated
+                                'camera'.tr,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -204,7 +206,7 @@ class _ImageScannerScreenState extends State<ImageScannerScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'photos'.tr, // ✅ Translated
+                                'photos'.tr,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -221,12 +223,71 @@ class _ImageScannerScreenState extends State<ImageScannerScreen> {
               ),
             ),
 
-            // Loading overlay
-            if (controller.isLoading.value)
+            // ✅ Improved Loading Overlay with Message
+            if (controller.isLoading.value || controller.hasLoadingMessage)
               Container(
-                color: Colors.black.withOpacity(0.5),
-                child: const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
+                color: Colors.black.withOpacity(0.6),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    margin: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Spinner
+                        const SizedBox(
+                          height: 50,
+                          width: 50,
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF4F85AA),
+                            strokeWidth: 4,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Loading Message
+                        Obx(() => Text(
+                          controller.getLoadingMessage.isNotEmpty
+                              ? controller.getLoadingMessage
+                              : 'Processing...'.tr,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF333333),
+                          ),
+                          textAlign: TextAlign.center,
+                        )),
+
+                        const SizedBox(height: 8),
+
+                        // Subtitle / Hint
+                        Obx(() => Text(
+                          controller.getLoadingMessage.contains('Analyzing') ||
+                              controller.getLoadingMessage.contains('Processing')
+                              ? 'This may take a few seconds'.tr
+                              : controller.getLoadingMessage.contains('Saving')
+                              ? 'Please do not close the app'.tr
+                              : '',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                          textAlign: TextAlign.center,
+                        )),
+                      ],
+                    ),
+                  ),
                 ),
               ),
           ],

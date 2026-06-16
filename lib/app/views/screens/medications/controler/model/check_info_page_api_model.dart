@@ -1,3 +1,5 @@
+// lib/app/views/screens/medications/controler/model/check_info_page_api_model.dart
+
 class CheckInfoPageApiModel {
   final int id;
   final String originalImage;
@@ -49,31 +51,183 @@ class CheckInfoPageApiModel {
     required this.audioInstructions,
   });
 
+  // 🔍 হেলপার ফাংশন - সব ভাষার ফিল্ড খুঁজে বের করে
+  static String? _findField(Map<String, dynamic> data, List<String> possibleKeys) {
+    for (var key in possibleKeys) {
+      if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
+        return data[key].toString();
+      }
+    }
+    return null;
+  }
+
+  // 🔍 Nested ফিল্ড খুঁজে বের করার ফাংশন
+  static Map<String, dynamic> _findNestedField(Map<String, dynamic> data, List<String> possibleKeys) {
+    for (var key in possibleKeys) {
+      if (data.containsKey(key) && data[key] is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(data[key]);
+      }
+    }
+    return {};
+  }
+
   factory CheckInfoPageApiModel.fromJson(Map<String, dynamic> json) {
+    // 🌍 সব ভাষার ফিল্ড নাম
+    String genericName = _findField(json, [
+      'generic_name', 'nombre_generico', 'nom_generique',
+      'nome_generico', 'non_jenerik', 'генерическое_название',
+      '通用名', 'genericName'
+    ]) ?? 'Unknown';
+
+    String brandName = _findField(json, [
+      'brand_name', 'nombre_marca', 'nom_marque',
+      'nome_marca', 'non_mak', 'торговое_название',
+      '品牌名称', 'brandName'
+    ]) ?? 'Unknown';
+
+    String manufacturer = _findField(json, [
+      'manufacturer', 'fabricante', 'fabricant',
+      'fabricante', 'fabrikant', 'производитель',
+      '制造商'
+    ]) ?? '';
+
+    String drugClass = _findField(json, [
+      'drug_class', 'clase_medicamento', 'classe_medicament',
+      'classe_medicamento', 'klas_medikaman', 'класс_препарата',
+      '药物类别', '药品分类'
+    ]) ?? '';
+
+    String uses = _findField(json, [
+      'uses', 'usos', 'utilisations',
+      'usos', 'itilizasyon', 'применение',
+      '用途', '适应症'
+    ]) ?? '';
+
+    String howToTake = _findField(json, [
+      'how_to_take', 'como_tomar', 'comment_prendre',
+      'como_tomar', 'kijan_pou_pran', 'как_принимать',
+      '如何服用', '用法用量'
+    ]) ?? '';
+
+    String warnings = _findField(json, [
+      'warnings', 'advertencias', 'avertissements',
+      'avisos', 'avis', 'предупреждения',
+      '警告', '注意事项'
+    ]) ?? '';
+
+    String storageInstructions = _findField(json, [
+      'storage_instructions', 'instrucciones_almacenamiento', 'instructions_stockage',
+      'instrucoes_armazenamento', 'enstriksyon_stokaj', 'инструкции_хранению',
+      '存储说明', '贮藏'
+    ]) ?? '';
+
+    String interactions = _findField(json, [
+      'interactions', 'interacciones', 'interactions',
+      'interacoes', 'entèraksyon', 'взаимодействия',
+      '相互作用', '药物相互作用'
+    ]) ?? '';
+
+    String totPills = _findField(json, [
+      'tot_pills', 'total_pastillas', 'total_comprimes',
+      'total_pilulas', 'total_gelil', 'всего_таблеток',
+      '总药片', '总片数'
+    ]) ?? '';
+
+    String originalImage = _findField(json, [
+      'original_image', 'imagen_original', 'image_originale',
+      'imagem_original', 'imaj_orijinal', 'исходное_изображение',
+      '原始图像', 'image'
+    ]) ?? '';
+
+    // 📊 Dosage Information
+    Map<String, dynamic> dosageData = _findNestedField(json, [
+      'dosage_information', 'informacion_dosificacion', 'information_dosage',
+      'informacao_dosagem', 'enfomason_dosaj', 'информация_дозировки',
+      '给药信息', '剂量信息'
+    ]);
+
+    DosageInformation dosageInfo;
+    if (dosageData.isNotEmpty) {
+      dosageInfo = DosageInformation(
+        adultsDosage: _findField(dosageData, [
+          'adults_dosage', 'dosificacion_adultos', 'dosage_adultes',
+          'dosagem_adultos', 'dosaj_granmoun', 'дозировка_взрослых',
+          '成人用量'
+        ]) ?? '',
+        childrenDosage: _findField(dosageData, [
+          'children_dosage', 'dosificacion_ninos', 'dosage_enfants',
+          'dosagem_criancas', 'dosaj_timoun', 'дозировка_детей',
+          '儿童用量'
+        ]) ?? '',
+        elderlyDosage: _findField(dosageData, [
+          'elderly_dosage', 'dosificacion_ancianos', 'dosage_personnes_agees',
+          'dosagem_idosos', 'dosaj_moun_vye', 'дозировка_пожилых',
+          '老年人用量'
+        ]) ?? '',
+      );
+    } else {
+      dosageInfo = DosageInformation(
+        adultsDosage: '',
+        childrenDosage: '',
+        elderlyDosage: '',
+      );
+    }
+
+    // 📊 Side Effects
+    Map<String, dynamic> sideEffectsData = _findNestedField(json, [
+      'side_effects', 'efectos_secundarios', 'effets_secondaires',
+      'efeitos_colaterais', 'efet_segondè', 'побочные_эффекты',
+      '副作用'
+    ]);
+
+    SideEffects sideEffects;
+    if (sideEffectsData.isNotEmpty) {
+      sideEffects = SideEffects(
+        common: _findField(sideEffectsData, [
+          'common', 'comunes', 'courants',
+          'comuns', 'ordinè', 'частые',
+          '常见'
+        ]) ?? '',
+        serious: _findField(sideEffectsData, [
+          'serious', 'graves', 'graves',
+          'graves', 'grav', 'серьезные',
+          '严重'
+        ]) ?? '',
+      );
+    } else {
+      sideEffects = SideEffects(common: '', serious: '');
+    }
+
     return CheckInfoPageApiModel(
-      id: json['id'],
-      originalImage: json['original_image'],
-      genericName: json['generic_name'],
-      brandName: json['brand_name'],
-      manufacturer: json['manufacturer'],
-      drugClass: json['drug_class'],
-      uses: json['uses'],
-      totPills: json['tot_pills'],
-      dosageInformation: DosageInformation.fromJson(json['dosage_information']),
-      howToTake: json['how_to_take'],
-      sideEffects: SideEffects.fromJson(json['side_effects']),
-      warnings: json['warnings'],
-      storageInstructions: json['storage_instructions'],
-      interactions: json['interactions'],
-      aiAdditionalNotes: json['ai_additional_notes'],
-      isActive: json['is_active'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      id: json['id'] ?? 0,
+      originalImage: originalImage,
+      genericName: genericName,
+      brandName: brandName,
+      manufacturer: manufacturer,
+      drugClass: drugClass,
+      uses: uses,
+      totPills: totPills,
+      dosageInformation: dosageInfo,
+      howToTake: howToTake,
+      sideEffects: sideEffects,
+      warnings: warnings,
+      storageInstructions: storageInstructions,
+      interactions: interactions,
+      aiAdditionalNotes: _findField(json, [
+        'ai_additional_notes', '附加说明'
+      ]) ?? '',
+      isActive: json['is_active'] ?? false,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'].toString())
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'].toString())
+          : DateTime.now(),
       additionalNotes: json['additional_notes'] ?? [],
-      language: json['language'],
-      audioUrls: AudioUrls.fromJson(json['audio_urls']),
-      audioDirectUrl: json['audio_direct_url'],
-      audioInstructions: AudioInstructions.fromJson(json['audio_instructions']),
+      language: json['language']?.toString() ?? 'en',
+      audioUrls: AudioUrls.fromJson(json['audio_urls'] ?? {}),
+      audioDirectUrl: json['audio_direct_url']?.toString() ?? '',
+      audioInstructions: AudioInstructions.fromJson(json['audio_instructions'] ?? {}),
     );
   }
 
@@ -106,6 +260,7 @@ class CheckInfoPageApiModel {
   }
 }
 
+// DosageInformation - আপডেট needed
 class DosageInformation {
   final String adultsDosage;
   final String childrenDosage;
@@ -119,9 +274,9 @@ class DosageInformation {
 
   factory DosageInformation.fromJson(Map<String, dynamic> json) {
     return DosageInformation(
-      adultsDosage: json['adults_dosage'],
-      childrenDosage: json['children_dosage'],
-      elderlyDosage: json['elderly_dosage'],
+      adultsDosage: json['adults_dosage'] ?? '',
+      childrenDosage: json['children_dosage'] ?? '',
+      elderlyDosage: json['elderly_dosage'] ?? '',
     );
   }
 
@@ -134,6 +289,7 @@ class DosageInformation {
   }
 }
 
+// SideEffects - আপডেট needed
 class SideEffects {
   final String common;
   final String serious;
@@ -141,7 +297,10 @@ class SideEffects {
   SideEffects({required this.common, required this.serious});
 
   factory SideEffects.fromJson(Map<String, dynamic> json) {
-    return SideEffects(common: json['common'], serious: json['serious']);
+    return SideEffects(
+      common: json['common'] ?? '',
+      serious: json['serious'] ?? '',
+    );
   }
 
   Map<String, dynamic> toJson() {
@@ -149,6 +308,7 @@ class SideEffects {
   }
 }
 
+// AudioUrls - আপডেট needed
 class AudioUrls {
   final String en;
   final String es;
@@ -170,13 +330,13 @@ class AudioUrls {
 
   factory AudioUrls.fromJson(Map<String, dynamic> json) {
     return AudioUrls(
-      en: json['en'],
-      es: json['es'],
-      fr: json['fr'],
-      pt: json['pt'],
-      ht: json['ht'],
-      zhCn: json['zh-CN'],
-      ru: json['ru'],
+      en: json['en']?.toString() ?? '',
+      es: json['es']?.toString() ?? '',
+      fr: json['fr']?.toString() ?? '',
+      pt: json['pt']?.toString() ?? '',
+      ht: json['ht']?.toString() ?? '',
+      zhCn: json['zh-CN']?.toString() ?? '',
+      ru: json['ru']?.toString() ?? '',
     );
   }
 
@@ -193,6 +353,7 @@ class AudioUrls {
   }
 }
 
+// AudioInstructions - আপডেট needed
 class AudioInstructions {
   final String description;
   final List<String> languages;
@@ -206,9 +367,11 @@ class AudioInstructions {
 
   factory AudioInstructions.fromJson(Map<String, dynamic> json) {
     return AudioInstructions(
-      description: json['description'],
-      languages: List<String>.from(json['languages']),
-      example: json['example'],
+      description: json['description']?.toString() ?? '',
+      languages: json['languages'] != null
+          ? List<String>.from(json['languages'])
+          : [],
+      example: json['example']?.toString() ?? '',
     );
   }
 

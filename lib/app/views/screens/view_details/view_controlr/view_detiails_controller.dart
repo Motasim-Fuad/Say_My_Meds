@@ -17,13 +17,13 @@ import 'package:saymymeds/app/views/screens/settings/view/setting_all_page_cntro
 class ViewDetailsController extends GetxController {
   final Rx<File?> selectedImage = Rx<File?>(null);
   final RxBool isLoading = RxBool(false);
-  final RxBool isSaving = RxBool(false); // ✅ নতুন: শুধু save এর জন্য loading
+  final RxBool isSaving = RxBool(false);
   final RxBool isPlaying = RxBool(false);
   final RxString selectedLanguage = RxString('en');
   final RxString notes = RxString('');
   final Rx<MedicationPreviewModel?> medicationData = Rx<MedicationPreviewModel?>(null);
   final RxInt refreshUI = RxInt(0);
-  final RxString loadingMessage = RxString(''); // ✅ নতুন: loading message দেখানোর জন্য
+  final RxString loadingMessage = RxString('');
 
   late final FlutterTts _flutterTts;
   bool _ttsInitialized = false;
@@ -136,6 +136,208 @@ class ViewDetailsController extends GetxController {
     return value.toString();
   }
 
+  // ==================== HELPER: FIND TRANSLATED FIELDS ====================
+
+  String? _findField(Map<String, dynamic> data, List<String> possibleKeys) {
+    for (var key in possibleKeys) {
+      if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
+        return data[key].toString();
+      }
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _findNestedField(Map<String, dynamic> data, List<String> possibleKeys) {
+    for (var key in possibleKeys) {
+      if (data.containsKey(key) && data[key] is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(data[key]);
+      }
+    }
+    return {};
+  }
+
+  Map<String, dynamic> _extractTranslatedFields(Map<String, dynamic> data) {
+    print('🔍 Extracting translated fields...');
+    Map<String, dynamic> result = {};
+
+    // Generic Name
+    String? genericName = _findField(data, [
+      'generic_name', 'nombre_generico', 'nom_generique',
+      'nome_generico', 'non_jenerik', 'генерическое_название',
+      '通用名', 'genericName'
+    ]);
+    if (genericName != null) result['generic_name'] = genericName;
+
+    // Brand Name
+    String? brandName = _findField(data, [
+      'brand_name', 'nombre_marca', 'nom_marque',
+      'nome_marca', 'non_mak', 'торговое_название',
+      '品牌名称', 'brandName'
+    ]);
+    if (brandName != null) result['brand_name'] = brandName;
+
+    // Manufacturer
+    String? manufacturer = _findField(data, [
+      'manufacturer', 'fabricante', 'fabricant',
+      'fabricante', 'fabrikant', 'производитель',
+      '制造商'
+    ]);
+    if (manufacturer != null) result['manufacturer'] = manufacturer;
+
+    // Drug Class
+    String? drugClass = _findField(data, [
+      'drug_class', 'clase_medicamento', 'classe_medicament',
+      'classe_medicamento', 'klas_medikaman', 'класс_препарата',
+      '药物类别'
+    ]);
+    if (drugClass != null) result['drug_class'] = drugClass;
+
+    // Uses
+    String? uses = _findField(data, [
+      'uses', 'usos', 'utilisations',
+      'usos', 'itilizasyon', 'применение',
+      '用途'
+    ]);
+    if (uses != null) result['uses'] = uses;
+
+    // How to Take
+    String? howToTake = _findField(data, [
+      'how_to_take', 'como_tomar', 'comment_prendre',
+      'como_tomar', 'kijan_pou_pran', 'как_принимать',
+      '如何服用'
+    ]);
+    if (howToTake != null) result['how_to_take'] = howToTake;
+
+    // Warnings
+    String? warnings = _findField(data, [
+      'warnings', 'advertencias', 'avertissements',
+      'avisos', 'avis', 'предупреждения',
+      '警告'
+    ]);
+    if (warnings != null) result['warnings'] = warnings;
+
+    // Storage Instructions
+    String? storageInstructions = _findField(data, [
+      'storage_instructions', 'instrucciones_almacenamiento', 'instructions_stockage',
+      'instrucoes_armazenamento', 'enstriksyon_stokaj', 'инструкции_хранению',
+      '存储说明'
+    ]);
+    if (storageInstructions != null) result['storage_instructions'] = storageInstructions;
+
+    // Interactions
+    String? interactions = _findField(data, [
+      'interactions', 'interacciones', 'interactions',
+      'interacoes', 'entèraksyon', 'взаимодействия',
+      '相互作用'
+    ]);
+    if (interactions != null) result['interactions'] = interactions;
+
+    // Tot Pills
+    String? totPills = _findField(data, [
+      'tot_pills', 'total_pastillas', 'total_comprimes',
+      'total_pilulas', 'total_gelil', 'всего_таблеток',
+      '总药片'
+    ]);
+    if (totPills != null) result['tot_pills'] = totPills;
+
+    // Dosage Information - find nested
+    Map<String, dynamic> dosageData = _findNestedField(data, [
+      'dosage_information', 'informacion_dosificacion', 'information_dosage',
+      'informacao_dosagem', 'enfomason_dosaj', 'информация_дозировки',
+      '给药信息'
+    ]);
+
+    if (dosageData.isNotEmpty) {
+      Map<String, dynamic> dosage = {};
+
+      String? adultsDosage = _findField(dosageData, [
+        'adults_dosage', 'dosificacion_adultos', 'dosage_adultes',
+        'dosagem_adultos', 'dosaj_granmoun', 'дозировка_взрослых',
+        '成人用量'
+      ]);
+      if (adultsDosage != null) dosage['adults_dosage'] = adultsDosage;
+
+      String? childrenDosage = _findField(dosageData, [
+        'children_dosage', 'dosificacion_ninos', 'dosage_enfants',
+        'dosagem_criancas', 'dosaj_timoun', 'дозировка_детей',
+        '儿童用量'
+      ]);
+      if (childrenDosage != null) dosage['children_dosage'] = childrenDosage;
+
+      String? elderlyDosage = _findField(dosageData, [
+        'elderly_dosage', 'dosificacion_ancianos', 'dosage_personnes_agees',
+        'dosagem_idosos', 'dosaj_moun_vye', 'дозировка_пожилых',
+        '老年人用量'
+      ]);
+      if (elderlyDosage != null) dosage['elderly_dosage'] = elderlyDosage;
+
+      if (dosage.isNotEmpty) {
+        result['dosage_information'] = dosage;
+      }
+    }
+
+    // Side Effects - find nested
+    Map<String, dynamic> sideEffectsData = _findNestedField(data, [
+      'side_effects', 'efectos_secundarios', 'effets_secondaires',
+      'efeitos_colaterais', 'efet_segondè', 'побочные_эффекты',
+      '副作用'
+    ]);
+
+    if (sideEffectsData.isNotEmpty) {
+      Map<String, dynamic> sideEffects = {};
+
+      String? common = _findField(sideEffectsData, [
+        'common', 'comunes', 'courants',
+        'comuns', 'ordinè', 'частые',
+        '常见'
+      ]);
+      if (common != null) sideEffects['common'] = common;
+
+      String? serious = _findField(sideEffectsData, [
+        'serious', 'graves', 'graves',
+        'graves', 'grav', 'серьезные',
+        '严重'
+      ]);
+      if (serious != null) sideEffects['serious'] = serious;
+
+      if (sideEffects.isNotEmpty) {
+        result['side_effects'] = sideEffects;
+      }
+    }
+
+    return result;
+  }
+
+  Map<String, dynamic> _createEmptyResponse() {
+    return {
+      'preview_id': '',
+      'language': 'en',
+      'uploaded_image': {'filename': '', 'url': ''},
+      'audio_urls': {'en': '', 'es': '', 'fr': '', 'pt': '', 'ht': '', 'zh-CN': '', 'ru': ''},
+      'ai_analysis': {
+        'tot_pills': '',
+        'generic_name': 'Unknown',
+        'brand_name': 'Unknown',
+        'manufacturer': '',
+        'drug_class': '',
+        'uses': '',
+        'how_to_take': '',
+        'warnings': '',
+        'storage_instructions': '',
+        'interactions': '',
+        'dosage_information': {
+          'adults_dosage': '',
+          'children_dosage': '',
+          'elderly_dosage': '',
+        },
+        'side_effects': {
+          'common': '',
+          'serious': '',
+        },
+      }
+    };
+  }
+
   // ==================== IMAGE PICKING METHODS ====================
 
   Future<void> pickImageFromCamera(BuildContext context) async {
@@ -189,6 +391,8 @@ class ViewDetailsController extends GetxController {
   Future<void> uploadImage(BuildContext context) async {
     if (selectedImage.value == null) {
       print('⚠️ No image selected');
+      loadingMessage.value = '';
+      _showError('Please select an image first'.tr, context);
       return;
     }
 
@@ -201,7 +405,8 @@ class ViewDetailsController extends GetxController {
       if (token == null) {
         print('❌ No authentication token found');
         loadingMessage.value = '';
-        _showError('Authentication token not found', context);
+        _showError('Please login to continue'.tr, context);
+        isLoading.value = false;
         return;
       }
 
@@ -211,11 +416,15 @@ class ViewDetailsController extends GetxController {
       final uri = Uri.parse('${ApiConstants.aiAnalysis}?lang=$apiLang');
       print('🌐 API URL: $uri');
 
+      loadingMessage.value = 'Uploading image...'.tr;
+
       final request = http.MultipartRequest('POST', uri);
       request.headers.addAll({'Authorization': 'Bearer $cleanedToken'});
       request.files.add(
         await http.MultipartFile.fromPath('image', selectedImage.value!.path),
       );
+
+      loadingMessage.value = 'AI is analyzing the image...'.tr;
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
@@ -227,24 +436,38 @@ class ViewDetailsController extends GetxController {
         print('✅ AI Analysis successful!');
 
         loadingMessage.value = 'Processing medication data...'.tr;
-        await Future.delayed(const Duration(milliseconds: 500)); // Small delay for UX
+        await Future.delayed(const Duration(milliseconds: 500));
 
         if (jsonData is Map<String, dynamic>) {
-          final sanitizedData = _sanitizeApiResponse(jsonData);
-          medicationData.value = MedicationPreviewModel.fromJson(sanitizedData);
-          refreshUI.value++;
+          if (jsonData.containsKey('ai_analysis') && jsonData['ai_analysis'] != null) {
+            final sanitizedData = _sanitizeApiResponse(jsonData);
+            medicationData.value = MedicationPreviewModel.fromJson(sanitizedData);
+            refreshUI.value++;
 
-          print('💊 Medication detected: ${medicationData.value?.aiAnalysis.brandName}');
-          loadingMessage.value = '';
+            print('💊 Medication detected: ${medicationData.value?.aiAnalysis.brandName}');
+            loadingMessage.value = '';
 
-          if (context.mounted) {
-            context.push(AppRoutes.medicineDetailPage, extra: medicationData.value);
+            if (context.mounted) {
+              context.push(AppRoutes.medicineDetailPage, extra: medicationData.value);
+            }
+          } else {
+            print('⚠️ AI Analysis response missing ai_analysis data');
+            loadingMessage.value = '';
+            _showError('Could not detect medication in image'.tr, context);
           }
         }
       } else if (response.statusCode == 401 || response.statusCode == 403) {
         print('❌ Unauthorized - Status: ${response.statusCode}');
         loadingMessage.value = '';
-        _showError('Unauthorized — please log in again', context);
+        _showError('Session expired. Please login again.'.tr, context);
+      } else if (response.statusCode == 400) {
+        print('❌ Bad Request - Status: ${response.statusCode}');
+        loadingMessage.value = '';
+        _showError('Invalid image or format not supported'.tr, context);
+      } else if (response.statusCode == 500) {
+        print('❌ Server Error - Status: ${response.statusCode}');
+        loadingMessage.value = '';
+        _showError('Server error. Please try again later.'.tr, context);
       } else {
         print('❌ Upload failed with status: ${response.statusCode}');
         loadingMessage.value = '';
@@ -253,49 +476,91 @@ class ViewDetailsController extends GetxController {
     } catch (e) {
       print('❌ Upload error: $e');
       loadingMessage.value = '';
-      _showError('Failed to upload image: $e', context);
+
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection refused')) {
+        _showError('No internet connection. Please check your network.'.tr, context);
+      } else if (e.toString().contains('Timeout')) {
+        _showError('Request timed out. Please try again.'.tr, context);
+      } else {
+        _showError('Something went wrong. Please try again.'.tr, context);
+      }
     } finally {
       isLoading.value = false;
+      loadingMessage.value = '';
       print('🏁 Upload process completed');
     }
   }
 
+  // ==================== SANITIZE API RESPONSE ====================
+
   Map<String, dynamic> _sanitizeApiResponse(Map<String, dynamic> data) {
     print('🔧 Sanitizing API response...');
-    final sanitized = Map<String, dynamic>.from(data);
 
-    if (sanitized['ai_analysis'] is Map<String, dynamic>) {
-      final analysis = Map<String, dynamic>.from(sanitized['ai_analysis']);
-
-      analysis['tot_pills'] = _toStringValue(analysis['tot_pills']);
-      analysis['generic_name'] = _toStringValue(analysis['generic_name']);
-      analysis['brand_name'] = _toStringValue(analysis['brand_name']);
-      analysis['manufacturer'] = _toStringValue(analysis['manufacturer']);
-      analysis['drug_class'] = _toStringValue(analysis['drug_class']);
-      analysis['uses'] = _toStringValue(analysis['uses']);
-      analysis['how_to_take'] = _toStringValue(analysis['how_to_take']);
-      analysis['warnings'] = _toStringValue(analysis['warnings']);
-      analysis['storage_instructions'] = _toStringValue(analysis['storage_instructions']);
-      analysis['interactions'] = _toStringValue(analysis['interactions']);
-
-      if (analysis['dosage_information'] is Map<String, dynamic>) {
-        final dosage = Map<String, dynamic>.from(analysis['dosage_information']);
-        dosage['adults_dosage'] = _toStringValue(dosage['adults_dosage']);
-        dosage['children_dosage'] = _toStringValue(dosage['children_dosage']);
-        dosage['elderly_dosage'] = _toStringValue(dosage['elderly_dosage']);
-        analysis['dosage_information'] = dosage;
-      }
-
-      if (analysis['side_effects'] is Map<String, dynamic>) {
-        final sideEffects = Map<String, dynamic>.from(analysis['side_effects']);
-        sideEffects['common'] = _toStringValue(sideEffects['common']);
-        sideEffects['serious'] = _toStringValue(sideEffects['serious']);
-        analysis['side_effects'] = sideEffects;
-      }
-
-      sanitized['ai_analysis'] = analysis;
+    if (data == null || data.isEmpty) {
+      print('⚠️ Empty or null response received');
+      return _createEmptyResponse();
     }
 
+    final sanitized = Map<String, dynamic>.from(data);
+
+    Map<String, dynamic> analysis = {};
+
+    if (sanitized['ai_analysis'] != null && sanitized['ai_analysis'] is Map<String, dynamic>) {
+      analysis = Map<String, dynamic>.from(sanitized['ai_analysis']);
+    } else {
+      print('⚠️ ai_analysis not found, checking for translated fields...');
+      analysis = _extractTranslatedFields(sanitized);
+    }
+
+    // ✅ Ensure all fields exist
+    analysis['tot_pills'] = _toStringValue(analysis['tot_pills'] ?? analysis['total_pastillas'] ?? analysis['total_comprimes'] ?? '');
+    analysis['generic_name'] = _toStringValue(analysis['generic_name'] ?? analysis['nombre_generico'] ?? analysis['nom_generique'] ?? analysis['nome_generico'] ?? analysis['non_jenerik'] ?? analysis['генерическое_название'] ?? analysis['通用名'] ?? 'Unknown');
+    analysis['brand_name'] = _toStringValue(analysis['brand_name'] ?? analysis['nombre_marca'] ?? analysis['nom_marque'] ?? analysis['nome_marca'] ?? analysis['non_mak'] ?? analysis['торговое_название'] ?? analysis['品牌名称'] ?? 'Unknown');
+    analysis['manufacturer'] = _toStringValue(analysis['manufacturer'] ?? analysis['fabricante'] ?? analysis['fabricant'] ?? analysis['fabricante'] ?? analysis['fabrikant'] ?? analysis['производитель'] ?? analysis['制造商'] ?? '');
+    analysis['drug_class'] = _toStringValue(analysis['drug_class'] ?? analysis['clase_medicamento'] ?? analysis['classe_medicament'] ?? analysis['classe_medicamento'] ?? analysis['klas_medikaman'] ?? analysis['класс_препарата'] ?? analysis['药物类别'] ?? '');
+    analysis['uses'] = _toStringValue(analysis['uses'] ?? analysis['usos'] ?? analysis['utilisations'] ?? analysis['usos'] ?? analysis['itilizasyon'] ?? analysis['применение'] ?? analysis['用途'] ?? '');
+    analysis['how_to_take'] = _toStringValue(analysis['how_to_take'] ?? analysis['como_tomar'] ?? analysis['comment_prendre'] ?? analysis['como_tomar'] ?? analysis['kijan_pou_pran'] ?? analysis['как_принимать'] ?? analysis['如何服用'] ?? '');
+    analysis['warnings'] = _toStringValue(analysis['warnings'] ?? analysis['advertencias'] ?? analysis['avertissements'] ?? analysis['avisos'] ?? analysis['avis'] ?? analysis['предупреждения'] ?? analysis['警告'] ?? '');
+    analysis['storage_instructions'] = _toStringValue(analysis['storage_instructions'] ?? analysis['instrucciones_almacenamiento'] ?? analysis['instructions_stockage'] ?? analysis['instrucoes_armazenamento'] ?? analysis['enstriksyon_stokaj'] ?? analysis['инструкции_хранению'] ?? analysis['存储说明'] ?? '');
+    analysis['interactions'] = _toStringValue(analysis['interactions'] ?? analysis['interacciones'] ?? analysis['interactions'] ?? analysis['interacoes'] ?? analysis['entèraksyon'] ?? analysis['взаимодействия'] ?? analysis['相互作用'] ?? '');
+
+    // ✅ Dosage Information
+    Map<String, dynamic> dosageData = {};
+    if (analysis['dosage_information'] != null && analysis['dosage_information'] is Map<String, dynamic>) {
+      dosageData = Map<String, dynamic>.from(analysis['dosage_information']);
+    } else {
+      dosageData = _findNestedField(analysis, [
+        'dosage_information', 'informacion_dosificacion', 'information_dosage',
+        'informacao_dosagem', 'enfomason_dosaj', 'информация_дозировки',
+        '给药信息'
+      ]);
+    }
+
+    analysis['dosage_information'] = {
+      'adults_dosage': _toStringValue(dosageData['adults_dosage'] ?? dosageData['dosificacion_adultos'] ?? dosageData['dosage_adultes'] ?? dosageData['dosagem_adultos'] ?? dosageData['dosaj_granmoun'] ?? dosageData['дозировка_взрослых'] ?? dosageData['成人用量'] ?? ''),
+      'children_dosage': _toStringValue(dosageData['children_dosage'] ?? dosageData['dosificacion_ninos'] ?? dosageData['dosage_enfants'] ?? dosageData['dosagem_criancas'] ?? dosageData['dosaj_timoun'] ?? dosageData['дозировка_детей'] ?? dosageData['儿童用量'] ?? ''),
+      'elderly_dosage': _toStringValue(dosageData['elderly_dosage'] ?? dosageData['dosificacion_ancianos'] ?? dosageData['dosage_personnes_agees'] ?? dosageData['dosagem_idosos'] ?? dosageData['dosaj_moun_vye'] ?? dosageData['дозировка_пожилых'] ?? dosageData['老年人用量'] ?? ''),
+    };
+
+    // ✅ Side Effects
+    Map<String, dynamic> sideEffectsData = {};
+    if (analysis['side_effects'] != null && analysis['side_effects'] is Map<String, dynamic>) {
+      sideEffectsData = Map<String, dynamic>.from(analysis['side_effects']);
+    } else {
+      sideEffectsData = _findNestedField(analysis, [
+        'side_effects', 'efectos_secundarios', 'effets_secondaires',
+        'efeitos_colaterais', 'efet_segondè', 'побочные_эффекты',
+        '副作用'
+      ]);
+    }
+
+    analysis['side_effects'] = {
+      'common': _toStringValue(sideEffectsData['common'] ?? sideEffectsData['comunes'] ?? sideEffectsData['courants'] ?? sideEffectsData['comuns'] ?? sideEffectsData['ordinè'] ?? sideEffectsData['частые'] ?? sideEffectsData['常见'] ?? ''),
+      'serious': _toStringValue(sideEffectsData['serious'] ?? sideEffectsData['graves'] ?? sideEffectsData['graves'] ?? sideEffectsData['graves'] ?? sideEffectsData['grav'] ?? sideEffectsData['серьезные'] ?? sideEffectsData['严重'] ?? ''),
+    };
+
+    sanitized['ai_analysis'] = analysis;
     print('✅ Response sanitized successfully');
     return sanitized;
   }
@@ -321,6 +586,8 @@ class ViewDetailsController extends GetxController {
       }
 
       print('✅ Language changed to: ${selectedLanguage.value}');
+      // উদাহরণ: changeLanguage মেথডের ভিতরে
+      await debugFetchMedicationWithLanguage(8, 'zh-CN');
       await _setTtsLanguage();
 
       if (isPlaying.value) {
@@ -328,7 +595,7 @@ class ViewDetailsController extends GetxController {
         isPlaying.value = false;
       }
 
-      // ✅ শুধু যদি ইমেজ থাকে তাহলে রি-অ্যানালাইসিস করবে
+      // ✅ Re-analyze if image exists
       if (selectedImage.value != null) {
         loadingMessage.value = 'Re-analyzing with new language...'.tr;
         print('🔄 Re-analyzing image with new language...');
@@ -344,26 +611,41 @@ class ViewDetailsController extends GetxController {
         final langCode = selectedLanguage.value;
 
         final uri = Uri.parse('${ApiConstants.aiAnalysis}?lang=$langCode');
-        final request = http.MultipartRequest('POST', uri);
-        request.headers.addAll({'Authorization': 'Bearer $cleanedToken'});
-        request.files.add(
-          await http.MultipartFile.fromPath('image', selectedImage.value!.path),
-        );
 
-        final streamedResponse = await request.send();
-        final response = await http.Response.fromStream(streamedResponse);
+        try {
+          final request = http.MultipartRequest('POST', uri);
+          request.headers.addAll({'Authorization': 'Bearer $cleanedToken'});
+          request.files.add(
+            await http.MultipartFile.fromPath('image', selectedImage.value!.path),
+          );
 
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          final decoded = jsonDecode(response.body);
-          if (decoded is Map<String, dynamic>) {
-            final sanitizedData = _sanitizeApiResponse(decoded);
-            medicationData.value = MedicationPreviewModel.fromJson(sanitizedData);
-            refreshUI.value++;
-            print('✅ Re-analysis successful');
+          final streamedResponse = await request.send();
+          final response = await http.Response.fromStream(streamedResponse);
+
+          print('📥 Re-analysis response status: ${response.statusCode}');
+
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            final decoded = jsonDecode(response.body);
+            if (decoded is Map<String, dynamic>) {
+              if (decoded.containsKey('ai_analysis') && decoded['ai_analysis'] != null) {
+                final sanitizedData = _sanitizeApiResponse(decoded);
+                medicationData.value = MedicationPreviewModel.fromJson(sanitizedData);
+                refreshUI.value++;
+                print('✅ Re-analysis successful');
+              } else {
+                print('⚠️ Re-analysis response missing ai_analysis data');
+              }
+            }
+          } else if (response.statusCode == 500) {
+            print('⚠️ Server returned 500 during re-analysis, keeping existing data');
+          } else {
+            print('❌ Re-analysis failed with status: ${response.statusCode}');
+            if (response.statusCode != 500) {
+              _showError('Failed to re-analyze in $langCode', context);
+            }
           }
-        } else {
-          print('❌ Re-analysis failed with status: ${response.statusCode}');
-          _showError('Failed to re-analyze in $langCode', context);
+        } catch (e) {
+          print('❌ Re-analysis request error: $e');
         }
       }
 
@@ -383,6 +665,52 @@ class ViewDetailsController extends GetxController {
     print('🌍 Updating global language to: $langCode');
     selectedLanguage.value = langCode;
     _setTtsLanguage();
+  }
+
+  // ==================== DEBUG: FETCH MEDICATION WITH LANGUAGE ====================
+
+  Future<void> debugFetchMedicationWithLanguage(int medicationId, String langCode) async {
+    print('🐞 DEBUG: Fetching medication ID: $medicationId with language: $langCode');
+
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        print('❌ DEBUG: No token found!');
+        return;
+      }
+
+      final cleanedToken = token.trim().replaceAll('"', '');
+      final url = '${ApiConstants.baseUrl}/api/core/medications/$medicationId/?lang=$langCode';
+      print('🌐 DEBUG: URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $cleanedToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('📥 DEBUG: Response Status Code: ${response.statusCode}');
+      print('📥 DEBUG: Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        print('✅ DEBUG: Successfully fetched data:');
+        print(jsonData);
+      } else {
+        print('❌ DEBUG: Failed to fetch data. Status: ${response.statusCode}');
+        // Try to print error message from response
+        try {
+          final errorData = jsonDecode(response.body);
+          print('❌ DEBUG: Error Response: $errorData');
+        } catch (e) {
+          print('❌ DEBUG: Could not parse error response: $e');
+        }
+      }
+    } catch (e) {
+      print('❌ DEBUG: Exception occurred: $e');
+    }
   }
 
   // ==================== NOTES ====================
@@ -411,7 +739,6 @@ class ViewDetailsController extends GetxController {
       final url = Uri.parse(ApiConstants.notes);
       print('🌐 Notes API URL: $url');
 
-      // ✅ Retry mechanism for notes
       const maxRetries = 3;
       int retryCount = 0;
       bool success = false;
@@ -522,7 +849,7 @@ class ViewDetailsController extends GetxController {
     }
   }
 
-  // ==================== SAVE MEDICATION (WITH PROPER LOADING AND RETRY) ====================
+  // ==================== SAVE MEDICATION ====================
 
   Future<void> saveMedication(BuildContext context) async {
     if (medicationData.value?.previewId == null) {
@@ -530,7 +857,6 @@ class ViewDetailsController extends GetxController {
       return;
     }
 
-    // ✅ Prevent multiple save attempts
     if (isSaving.value) {
       print('⚠️ Save already in progress');
       return;
@@ -543,12 +869,10 @@ class ViewDetailsController extends GetxController {
       print('💾 Starting save medication process...');
       print('💊 Preview ID: ${medicationData.value!.previewId}');
 
-      // ✅ Initial delay for server to be ready
       await Future.delayed(const Duration(seconds: 1));
 
       loadingMessage.value = 'Saving medication, please wait...'.tr;
 
-      // ✅ Save note if exists
       if (notes.value.isNotEmpty) {
         print('📝 Saving note before medication...');
         loadingMessage.value = 'Saving your note...'.tr;
@@ -557,7 +881,6 @@ class ViewDetailsController extends GetxController {
       }
 
       loadingMessage.value = 'Saving to cloud...'.tr;
-      loadingMessage.value = 'Please wait...'.tr;
 
       final token = await _getToken();
       if (token == null) {
@@ -574,7 +897,6 @@ class ViewDetailsController extends GetxController {
       });
       print('📤 Request body: $requestBody');
 
-      // ✅ Retry mechanism - 3 attempts with delays
       const maxRetries = 3;
       int retryCount = 0;
       bool success = false;
@@ -617,7 +939,6 @@ class ViewDetailsController extends GetxController {
         }
       }
 
-      // All retries failed
       if (lastResponse != null && !success) {
         print('❌ All save attempts failed');
         loadingMessage.value = '';
@@ -656,16 +977,13 @@ class ViewDetailsController extends GetxController {
     final url = medVal.uploadedImage?.url;
     if (url == null || url.isEmpty) return '';
 
-    // URL already has base? check
     if (url.startsWith('http')) return url;
 
-    // Clean base URL
     String cleanBaseUrl = ApiConstants.baseUrl;
     if (cleanBaseUrl.endsWith('/')) {
       cleanBaseUrl = cleanBaseUrl.substring(0, cleanBaseUrl.length - 1);
     }
 
-    // Clean path
     String cleanPath = url;
     if (cleanPath.startsWith('/')) {
       cleanPath = cleanPath.substring(1);

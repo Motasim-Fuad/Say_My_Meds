@@ -1,3 +1,5 @@
+// lib/app/views/screens/view_details/medication_preview_model/medication_model.dart
+
 class MedicationPreviewModel {
   final String previewId;
   final AiAnalysis aiAnalysis;
@@ -14,13 +16,149 @@ class MedicationPreviewModel {
   });
 
   factory MedicationPreviewModel.fromJson(Map<String, dynamic> json) {
+    if (json == null || json.isEmpty) {
+      throw Exception('Empty or null response');
+    }
+
+    Map<String, dynamic> analysisData = {};
+    if (json['ai_analysis'] != null && json['ai_analysis'] is Map<String, dynamic>) {
+      analysisData = Map<String, dynamic>.from(json['ai_analysis']);
+    } else {
+      analysisData = _extractTranslatedFields(json);
+    }
+
     return MedicationPreviewModel(
-      previewId: json['preview_id'],
-      aiAnalysis: AiAnalysis.fromJson(json['ai_analysis']),
-      uploadedImage: UploadedImage.fromJson(json['uploaded_image']),
-      language: json['language'],
-      audioUrls: AudioUrls.fromJson(json['audio_urls']),
+      previewId: json['preview_id']?.toString() ?? '',
+      aiAnalysis: AiAnalysis.fromJson(analysisData),
+      uploadedImage: UploadedImage.fromJson(
+          json['uploaded_image'] ?? {'filename': '', 'url': ''}
+      ),
+      language: json['language']?.toString() ?? 'en',
+      audioUrls: AudioUrls.fromJson(
+          json['audio_urls'] ?? {'en': '', 'es': '', 'fr': '', 'pt': '', 'ht': '', 'zh-CN': '', 'ru': ''}
+      ),
     );
+  }
+
+  // 🔍 ট্রান্সলেটেড ফিল্ড খুঁজে বের করার হেলপার
+  static Map<String, dynamic> _extractTranslatedFields(Map<String, dynamic> data) {
+    print('🔍 Extracting translated fields from response...');
+    Map<String, dynamic> result = {};
+
+    // সব ভাষার ফিল্ড নামের ম্যাপ
+    final Map<String, List<String>> fieldMappings = {
+      'tot_pills': ['tot_pills', 'total_pastillas', 'total_comprimes', 'total_pilulas', 'total_gelil', 'всего_таблеток', '总药片', '总片数'],
+      'generic_name': ['generic_name', 'nombre_generico', 'nom_generique', 'nome_generico', 'non_jenerik', 'генерическое_название', '通用名', 'genericName'],
+      'brand_name': ['brand_name', 'nombre_marca', 'nom_marque', 'nome_marca', 'non_mak', 'торговое_название', '品牌名称', 'brandName'],
+      'manufacturer': ['manufacturer', 'fabricante', 'fabricant', 'fabricante', 'fabrikant', 'производитель', '制造商'],
+      'drug_class': ['drug_class', 'clase_medicamento', 'classe_medicament', 'classe_medicamento', 'klas_medikaman', 'класс_препарата', '药物类别'],
+      'uses': ['uses', 'usos', 'utilisations', 'usos', 'itilizasyon', 'применение', '用途', '适应症'],
+      'how_to_take': ['how_to_take', 'como_tomar', 'comment_prendre', 'como_tomar', 'kijan_pou_pran', 'как_принимать', '如何服用', '用法用量'],
+      'warnings': ['warnings', 'advertencias', 'avertissements', 'avisos', 'avis', 'предупреждения', '警告', '注意事项'],
+      'storage_instructions': ['storage_instructions', 'instrucciones_almacenamiento', 'instructions_stockage', 'instrucoes_armazenamento', 'enstriksyon_stokaj', 'инструкции_хранению', '存储说明', '贮藏'],
+      'interactions': ['interactions', 'interacciones', 'interactions', 'interacoes', 'entèraksyon', 'взаимодействия', '相互作用', '药物相互作用'],
+    };
+
+    // প্রতিটি ফিল্ড খুঁজে বের করা
+    fieldMappings.forEach((englishKey, possibleKeys) {
+      for (var key in possibleKeys) {
+        if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
+          result[englishKey] = data[key].toString();
+          print('   ✅ Found: $englishKey = ${data[key]}');
+          break;
+        }
+      }
+    });
+
+    // Dosage Information - nested
+    List<String> dosageKeys = [
+      'dosage_information', 'informacion_dosificacion', 'information_dosage',
+      'informacao_dosagem', 'enfomason_dosaj', 'информация_дозировки',
+      '给药信息', '剂量信息'
+    ];
+
+    Map<String, dynamic> dosageData = {};
+    for (var key in dosageKeys) {
+      if (data.containsKey(key) && data[key] is Map<String, dynamic>) {
+        dosageData = Map<String, dynamic>.from(data[key]);
+        print('   ✅ Found dosage_information');
+        break;
+      }
+    }
+
+    if (dosageData.isNotEmpty) {
+      Map<String, dynamic> dosage = {};
+
+      List<String> adultKeys = ['adults_dosage', 'dosificacion_adultos', 'dosage_adultes', 'dosagem_adultos', 'dosaj_granmoun', 'дозировка_взрослых', '成人用量'];
+      List<String> childKeys = ['children_dosage', 'dosificacion_ninos', 'dosage_enfants', 'dosagem_criancas', 'dosaj_timoun', 'дозировка_детей', '儿童用量'];
+      List<String> elderlyKeys = ['elderly_dosage', 'dosificacion_ancianos', 'dosage_personnes_agees', 'dosagem_idosos', 'dosaj_moun_vye', 'дозировка_пожилых', '老年人用量'];
+
+      for (var key in adultKeys) {
+        if (dosageData.containsKey(key) && dosageData[key] != null && dosageData[key].toString().isNotEmpty) {
+          dosage['adults_dosage'] = dosageData[key].toString();
+          break;
+        }
+      }
+      for (var key in childKeys) {
+        if (dosageData.containsKey(key) && dosageData[key] != null && dosageData[key].toString().isNotEmpty) {
+          dosage['children_dosage'] = dosageData[key].toString();
+          break;
+        }
+      }
+      for (var key in elderlyKeys) {
+        if (dosageData.containsKey(key) && dosageData[key] != null && dosageData[key].toString().isNotEmpty) {
+          dosage['elderly_dosage'] = dosageData[key].toString();
+          break;
+        }
+      }
+
+      if (dosage.isNotEmpty) {
+        result['dosage_information'] = dosage;
+      }
+    }
+
+    // Side Effects - nested
+    List<String> sideEffectKeys = [
+      'side_effects', 'efectos_secundarios', 'effets_secondaires',
+      'efeitos_colaterais', 'efet_segondè', 'побочные_эффекты',
+      '副作用'
+    ];
+
+    Map<String, dynamic> sideEffectsData = {};
+    for (var key in sideEffectKeys) {
+      if (data.containsKey(key) && data[key] is Map<String, dynamic>) {
+        sideEffectsData = Map<String, dynamic>.from(data[key]);
+        print('   ✅ Found side_effects');
+        break;
+      }
+    }
+
+    if (sideEffectsData.isNotEmpty) {
+      Map<String, dynamic> sideEffects = {};
+
+      List<String> commonKeys = ['common', 'comunes', 'courants', 'comuns', 'ordinè', 'частые', '常见'];
+      List<String> seriousKeys = ['serious', 'graves', 'graves', 'graves', 'grav', 'серьезные', '严重'];
+
+      for (var key in commonKeys) {
+        if (sideEffectsData.containsKey(key) && sideEffectsData[key] != null && sideEffectsData[key].toString().isNotEmpty) {
+          sideEffects['common'] = sideEffectsData[key].toString();
+          break;
+        }
+      }
+      for (var key in seriousKeys) {
+        if (sideEffectsData.containsKey(key) && sideEffectsData[key] != null && sideEffectsData[key].toString().isNotEmpty) {
+          sideEffects['serious'] = sideEffectsData[key].toString();
+          break;
+        }
+      }
+
+      if (sideEffects.isNotEmpty) {
+        result['side_effects'] = sideEffects;
+      }
+    }
+
+    print('✅ Extracted fields: ${result.keys}');
+    return result;
   }
 }
 
@@ -54,19 +192,78 @@ class AiAnalysis {
   });
 
   factory AiAnalysis.fromJson(Map<String, dynamic> json) {
+    // 🔍 হেলপার ফাংশন
+    String? findField(Map<String, dynamic> data, List<String> possibleKeys) {
+      for (var key in possibleKeys) {
+        if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
+          return data[key].toString();
+        }
+      }
+      return null;
+    }
+
     return AiAnalysis(
-      totPills: json['tot_pills'],
-      genericName: json['generic_name'],
-      brandName: json['brand_name'],
-      manufacturer: json['manufacturer'],
-      drugClass: json['drug_class'],
-      uses: json['uses'],
-      dosageInformation: DosageInformation.fromJson(json['dosage_information']),
-      howToTake: json['how_to_take'],
-      sideEffects: SideEffects.fromJson(json['side_effects']),
-      warnings: json['warnings'],
-      storageInstructions: json['storage_instructions'],
-      interactions: json['interactions'],
+      totPills: findField(json, [
+        'tot_pills', 'total_pastillas', 'total_comprimes',
+        'total_pilulas', 'total_gelil', 'всего_таблеток',
+        '总药片', '总片数'
+      ]) ?? '',
+      genericName: findField(json, [
+        'generic_name', 'nombre_generico', 'nom_generique',
+        'nome_generico', 'non_jenerik', 'генерическое_название',
+        '通用名', 'genericName'
+      ]) ?? 'Unknown',
+      brandName: findField(json, [
+        'brand_name', 'nombre_marca', 'nom_marque',
+        'nome_marca', 'non_mak', 'торговое_название',
+        '品牌名称', 'brandName'
+      ]) ?? 'Unknown',
+      manufacturer: findField(json, [
+        'manufacturer', 'fabricante', 'fabricant',
+        'fabricante', 'fabrikant', 'производитель',
+        '制造商'
+      ]) ?? '',
+      drugClass: findField(json, [
+        'drug_class', 'clase_medicamento', 'classe_medicament',
+        'classe_medicamento', 'klas_medikaman', 'класс_препарата',
+        '药物类别', '药品分类'
+      ]) ?? '',
+      uses: findField(json, [
+        'uses', 'usos', 'utilisations',
+        'usos', 'itilizasyon', 'применение',
+        '用途', '适应症'
+      ]) ?? '',
+      howToTake: findField(json, [
+        'how_to_take', 'como_tomar', 'comment_prendre',
+        'como_tomar', 'kijan_pou_pran', 'как_принимать',
+        '如何服用', '用法用量'
+      ]) ?? '',
+      warnings: findField(json, [
+        'warnings', 'advertencias', 'avertissements',
+        'avisos', 'avis', 'предупреждения',
+        '警告', '注意事项'
+      ]) ?? '',
+      storageInstructions: findField(json, [
+        'storage_instructions', 'instrucciones_almacenamiento', 'instructions_stockage',
+        'instrucoes_armazenamento', 'enstriksyon_stokaj', 'инструкции_хранению',
+        '存储说明', '贮藏'
+      ]) ?? '',
+      interactions: findField(json, [
+        'interactions', 'interacciones', 'interactions',
+        'interacoes', 'entèraksyon', 'взаимодействия',
+        '相互作用', '药物相互作用'
+      ]) ?? '',
+      dosageInformation: DosageInformation.fromJson(
+          json['dosage_information'] ??
+              json['给药信息'] ??
+              json['剂量信息'] ??
+              {}
+      ),
+      sideEffects: SideEffects.fromJson(
+          json['side_effects'] ??
+              json['副作用'] ??
+              {}
+      ),
     );
   }
 }
@@ -83,10 +280,31 @@ class DosageInformation {
   });
 
   factory DosageInformation.fromJson(Map<String, dynamic> json) {
+    String? findField(Map<String, dynamic> data, List<String> possibleKeys) {
+      for (var key in possibleKeys) {
+        if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
+          return data[key].toString();
+        }
+      }
+      return null;
+    }
+
     return DosageInformation(
-      adultsDosage: json['adults_dosage'],
-      childrenDosage: json['children_dosage'],
-      elderlyDosage: json['elderly_dosage'],
+      adultsDosage: findField(json, [
+        'adults_dosage', 'dosificacion_adultos', 'dosage_adultes',
+        'dosagem_adultos', 'dosaj_granmoun', 'дозировка_взрослых',
+        '成人用量'
+      ]) ?? '',
+      childrenDosage: findField(json, [
+        'children_dosage', 'dosificacion_ninos', 'dosage_enfants',
+        'dosagem_criancas', 'dosaj_timoun', 'дозировка_детей',
+        '儿童用量'
+      ]) ?? '',
+      elderlyDosage: findField(json, [
+        'elderly_dosage', 'dosificacion_ancianos', 'dosage_personnes_agees',
+        'dosagem_idosos', 'dosaj_moun_vye', 'дозировка_пожилых',
+        '老年人用量'
+      ]) ?? '',
     );
   }
 }
@@ -98,7 +316,27 @@ class SideEffects {
   SideEffects({required this.common, required this.serious});
 
   factory SideEffects.fromJson(Map<String, dynamic> json) {
-    return SideEffects(common: json['common'], serious: json['serious']);
+    String? findField(Map<String, dynamic> data, List<String> possibleKeys) {
+      for (var key in possibleKeys) {
+        if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
+          return data[key].toString();
+        }
+      }
+      return null;
+    }
+
+    return SideEffects(
+      common: findField(json, [
+        'common', 'comunes', 'courants',
+        'comuns', 'ordinè', 'частые',
+        '常见'
+      ]) ?? '',
+      serious: findField(json, [
+        'serious', 'graves', 'graves',
+        'graves', 'grav', 'серьезные',
+        '严重'
+      ]) ?? '',
+    );
   }
 }
 
@@ -109,7 +347,10 @@ class UploadedImage {
   UploadedImage({required this.filename, required this.url});
 
   factory UploadedImage.fromJson(Map<String, dynamic> json) {
-    return UploadedImage(filename: json['filename'], url: json['url']);
+    return UploadedImage(
+      filename: json['filename']?.toString() ?? '',
+      url: json['url']?.toString() ?? '',
+    );
   }
 }
 
@@ -134,13 +375,13 @@ class AudioUrls {
 
   factory AudioUrls.fromJson(Map<String, dynamic> json) {
     return AudioUrls(
-      en: json['en'],
-      es: json['es'],
-      fr: json['fr'],
-      pt: json['pt'],
-      ht: json['ht'],
-      zhCn: json['zh-CN'],
-      ru: json['ru'],
+      en: json['en']?.toString() ?? '',
+      es: json['es']?.toString() ?? '',
+      fr: json['fr']?.toString() ?? '',
+      pt: json['pt']?.toString() ?? '',
+      ht: json['ht']?.toString() ?? '',
+      zhCn: json['zh-CN']?.toString() ?? '',
+      ru: json['ru']?.toString() ?? '',
     );
   }
 

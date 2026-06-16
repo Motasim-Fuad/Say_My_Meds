@@ -25,80 +25,260 @@ class RecentlyScanned {
   };
 }
 
+// recently_scanned_model.dart - Medication ক্লাস আপডেট করুন
+
 class Medication {
   final int id;
-  String originalImage;  // ✅ final সরানো হয়েছে, এখন set করা যাবে
+  String originalImage;
   final String genericName;
   final String brandName;
-  final String manufacturer;
-  final String drugClass;
-  final String uses;
-  final String totPills;
-  final DosageInformation dosageInformation;
-  final String howToTake;
-  final SideEffects sideEffects;
-  final String warnings;
-  final String storageInstructions;
-  final String interactions;
-  final String aiAdditionalNotes;
-  final bool isActive;
+  final String? manufacturer;        // ✅ Optional করা হয়েছে
+  final String? drugClass;           // ✅ Optional করা হয়েছে
+  final String? uses;                // ✅ Optional করা হয়েছে
+  final String? totPills;            // ✅ Optional করা হয়েছে
+  final DosageInformation? dosageInformation;  // ✅ Optional করা হয়েছে
+  final String? howToTake;           // ✅ Optional করা হয়েছে
+  final SideEffects? sideEffects;    // ✅ Optional করা হয়েছে
+  final String? warnings;            // ✅ Optional করা হয়েছে
+  final String? storageInstructions; // ✅ Optional করা হয়েছে
+  final String? interactions;        // ✅ Optional করা হয়েছে
+  final String? aiAdditionalNotes;   // ✅ Optional করা হয়েছে
+  final bool? isActive;              // ✅ Optional করা হয়েছে
   final DateTime? createdAt;
   final DateTime? updatedAt;
-  final List<AdditionalNote> additionalNotes;
+  final List<AdditionalNote>? additionalNotes;  // ✅ Optional করা হয়েছে
 
   Medication({
     required this.id,
     required this.originalImage,
     required this.genericName,
     required this.brandName,
-    required this.manufacturer,
-    required this.drugClass,
-    required this.uses,
-    required this.totPills,
-    required this.dosageInformation,
-    required this.howToTake,
-    required this.sideEffects,
-    required this.warnings,
-    required this.storageInstructions,
-    required this.interactions,
-    required this.aiAdditionalNotes,
-    required this.isActive,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.additionalNotes,
+    this.manufacturer,
+    this.drugClass,
+    this.uses,
+    this.totPills,
+    this.dosageInformation,
+    this.howToTake,
+    this.sideEffects,
+    this.warnings,
+    this.storageInstructions,
+    this.interactions,
+    this.aiAdditionalNotes,
+    this.isActive,
+    this.createdAt,
+    this.updatedAt,
+    this.additionalNotes,
   });
 
   factory Medication.fromJson(Map<String, dynamic> json) {
+    // 🔍 ট্রান্সলেটেড ফিল্ড খুঁজে বের করার ফাংশন
+    String? findTranslatedField(Map<String, dynamic> data, List<String> possibleKeys) {
+      for (var key in possibleKeys) {
+        if (data.containsKey(key) && data[key] != null && data[key].toString().isNotEmpty) {
+          return data[key].toString();
+        }
+      }
+      return null;
+    }
+
+    // 🌍 বিভিন্ন ভাষার ফিল্ড নাম
+    String? genericName = findTranslatedField(json, [
+      'generic_name', 'nombre_generico', 'nom_generique',
+      'nome_generico', 'non_jenerik', 'генерическое_название',
+      '通用名', 'genericName', 'name'
+    ]);
+
+    String? brandName = findTranslatedField(json, [
+      'brand_name', 'nombre_marca', 'nom_marque',
+      'nome_marca', 'non_mak', 'торговое_название',
+      '品牌名称', 'brandName'
+    ]);
+
+    String? manufacturer = findTranslatedField(json, [
+      'manufacturer', 'fabricante', 'fabricant',
+      'fabricante', 'fabrikant', 'производитель',
+      '制造商'
+    ]);
+
+    String? drugClass = findTranslatedField(json, [
+      'drug_class', 'clase_medicamento', 'classe_medicament',
+      'classe_medicamento', 'klas_medikaman', 'класс_препарата',
+      '药物类别'
+    ]);
+
+    String? uses = findTranslatedField(json, [
+      'uses', 'usos', 'utilisations',
+      'usos', 'itilizasyon', 'применение',
+      '用途'
+    ]);
+
+    String? totPills = findTranslatedField(json, [
+      'tot_pills', 'total_pastillas', 'total_comprimes',
+      'total_pilulas', 'total_gelil', 'всего_таблеток',
+      '总药片'
+    ]);
+
+    String? howToTake = findTranslatedField(json, [
+      'how_to_take', 'como_tomar', 'comment_prendre',
+      'como_tomar', 'kijan_pou_pran', 'как_принимать',
+      '如何服用'
+    ]);
+
+    String? warnings = findTranslatedField(json, [
+      'warnings', 'advertencias', 'avertissements',
+      'avisos', 'avis', 'предупреждения',
+      '警告'
+    ]);
+
+    String? storageInstructions = findTranslatedField(json, [
+      'storage_instructions', 'instrucciones_almacenamiento', 'instructions_stockage',
+      'instrucoes_armazenamento', 'enstriksyon_stokaj', 'инструкции_хранению',
+      '存储说明'
+    ]);
+
+    String? interactions = findTranslatedField(json, [
+      'interactions', 'interacciones', 'interactions',
+      'interacoes', 'entèraksyon', 'взаимодействия',
+      '相互作用'
+    ]);
+
+    String? imagePath = findTranslatedField(json, [
+      'original_image', 'imagen_original', 'image_originale',
+      'imagem_original', 'imaj_orijinal', 'исходное_изображение',
+      '原始图像', 'image'
+    ]);
+
+    // Dosage Information
+    DosageInformation? dosageInfo;
+    if (json['dosage_information'] != null ||
+        json['informacion_dosificacion'] != null ||
+        json['information_dosage'] != null ||
+        json['informacao_dosagem'] != null ||
+        json['enfomason_dosaj'] != null ||
+        json['информация_дозировки'] != null ||
+        json['给药信息'] != null) {
+
+      Map<String, dynamic> dosageData = {};
+
+      // খুঁজে বের করুন কোন কী-তে ডসেজ ইনফো আছে
+      List<String> possibleDosageKeys = [
+        'dosage_information', 'informacion_dosificacion', 'information_dosage',
+        'informacao_dosagem', 'enfomason_dosaj', 'информация_дозировки',
+        '给药信息'
+      ];
+
+      for (var key in possibleDosageKeys) {
+        if (json[key] != null && json[key] is Map<String, dynamic>) {
+          dosageData = json[key];
+          break;
+        }
+      }
+
+      if (dosageData.isNotEmpty) {
+        String? adultsDosage = findTranslatedField(dosageData, [
+          'adults_dosage', 'dosificacion_adultos', 'dosage_adultes',
+          'dosagem_adultos', 'dosaj_granmoun', 'дозировка_взрослых',
+          '成人用量'
+        ]);
+
+        String? childrenDosage = findTranslatedField(dosageData, [
+          'children_dosage', 'dosificacion_ninos', 'dosage_enfants',
+          'dosagem_criancas', 'dosaj_timoun', 'дозировка_детей',
+          '儿童用量'
+        ]);
+
+        String? elderlyDosage = findTranslatedField(dosageData, [
+          'elderly_dosage', 'dosificacion_ancianos', 'dosage_personnes_agees',
+          'dosagem_idosos', 'dosaj_moun_vye', 'дозировка_пожилых',
+          '老年人用量'
+        ]);
+
+        dosageInfo = DosageInformation(
+          adultsDosage: adultsDosage ?? '',
+          childrenDosage: childrenDosage ?? '',
+          elderlyDosage: elderlyDosage ?? '',
+        );
+      }
+    }
+
+    // Side Effects
+    SideEffects? sideEffects;
+    if (json['side_effects'] != null ||
+        json['efectos_secundarios'] != null ||
+        json['effets_secondaires'] != null ||
+        json['efeitos_colaterais'] != null ||
+        json['efet_segondè'] != null ||
+        json['побочные_эффекты'] != null ||
+        json['副作用'] != null) {
+
+      Map<String, dynamic> sideEffectsData = {};
+      List<String> possibleSideEffectsKeys = [
+        'side_effects', 'efectos_secundarios', 'effets_secondaires',
+        'efeitos_colaterais', 'efet_segondè', 'побочные_эффекты',
+        '副作用'
+      ];
+
+      for (var key in possibleSideEffectsKeys) {
+        if (json[key] != null && json[key] is Map<String, dynamic>) {
+          sideEffectsData = json[key];
+          break;
+        }
+      }
+
+      if (sideEffectsData.isNotEmpty) {
+        List<String> common = [];
+        List<String> serious = [];
+
+        // Common side effects
+        dynamic commonData = sideEffectsData['common'] ?? sideEffectsData['comunes'] ??
+            sideEffectsData['courants'] ?? sideEffectsData['comuns'] ??
+            sideEffectsData['ordinè'] ?? sideEffectsData['частые'] ??
+            sideEffectsData['常见'];
+
+        if (commonData is List) {
+          common = commonData.map((e) => e.toString()).toList();
+        } else if (commonData is String && commonData.isNotEmpty) {
+          common = commonData.split(',').map((e) => e.trim()).toList();
+        }
+
+        // Serious side effects
+        dynamic seriousData = sideEffectsData['serious'] ?? sideEffectsData['graves'] ??
+            sideEffectsData['graves'] ?? sideEffectsData['graves'] ??
+            sideEffectsData['grav'] ?? sideEffectsData['серьезные'] ??
+            sideEffectsData['严重'];
+
+        if (seriousData is List) {
+          serious = seriousData.map((e) => e.toString()).toList();
+        } else if (seriousData is String && seriousData.isNotEmpty) {
+          serious = seriousData.split(',').map((e) => e.trim()).toList();
+        }
+
+        sideEffects = SideEffects(common: common, serious: serious);
+      }
+    }
+
     return Medication(
-      id: json['id'] is int
-          ? json['id'] as int
-          : int.parse(json['id'].toString()),
-      originalImage: json['original_image']?.toString() ?? '',
-      genericName: json['generic_name']?.toString() ?? '',
-      brandName: json['brand_name']?.toString() ?? '',
-      manufacturer: json['manufacturer']?.toString() ?? '',
-      drugClass: json['drug_class']?.toString() ?? '',
-      uses: json['uses']?.toString() ?? '',
-      totPills: json['tot_pills']?.toString() ?? '',
-      dosageInformation: DosageInformation.fromJson(
-        json['dosage_information'] as Map<String, dynamic>? ?? {},
-      ),
-      howToTake: json['how_to_take']?.toString() ?? '',
-      sideEffects: SideEffects.fromJson(
-        json['side_effects'] as Map<String, dynamic>? ?? {},
-      ),
-      warnings: json['warnings']?.toString() ?? '',
-      storageInstructions: json['storage_instructions']?.toString() ?? '',
-      interactions: json['interactions']?.toString() ?? '',
-      aiAdditionalNotes: json['ai_additional_notes']?.toString() ?? '',
-      isActive: json['is_active'] == null ? false : (json['is_active'] as bool),
+      id: json['id'] is int ? json['id'] as int : int.parse(json['id'].toString()),
+      originalImage: imagePath ?? '',
+      genericName: genericName ?? 'Unknown',
+      brandName: brandName ?? '',
+      manufacturer: manufacturer,
+      drugClass: drugClass,
+      uses: uses,
+      totPills: totPills,
+      dosageInformation: dosageInfo,
+      howToTake: howToTake,
+      sideEffects: sideEffects,
+      warnings: warnings,
+      storageInstructions: storageInstructions,
+      interactions: interactions,
+      aiAdditionalNotes: json['ai_additional_notes']?.toString(),
+      isActive: json['is_active'] as bool?,
       createdAt: _tryParseDateTime(json['created_at']),
       updatedAt: _tryParseDateTime(json['updated_at']),
-      additionalNotes:
-      (json['additional_notes'] as List<dynamic>?)
+      additionalNotes: (json['additional_notes'] as List<dynamic>?)
           ?.map((e) => AdditionalNote.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-          [],
+          .toList(),
     );
   }
 
@@ -111,9 +291,9 @@ class Medication {
     'drug_class': drugClass,
     'uses': uses,
     'tot_pills': totPills,
-    'dosage_information': dosageInformation.toJson(),
+    'dosage_information': dosageInformation?.toJson(),
     'how_to_take': howToTake,
-    'side_effects': sideEffects.toJson(),
+    'side_effects': sideEffects?.toJson(),
     'warnings': warnings,
     'storage_instructions': storageInstructions,
     'interactions': interactions,
@@ -121,7 +301,7 @@ class Medication {
     'is_active': isActive,
     'created_at': createdAt?.toIso8601String(),
     'updated_at': updatedAt?.toIso8601String(),
-    'additional_notes': additionalNotes.map((e) => e.toJson()).toList(),
+    'additional_notes': additionalNotes?.map((e) => e.toJson()).toList(),
   };
 
   static DateTime? _tryParseDateTime(dynamic v) {

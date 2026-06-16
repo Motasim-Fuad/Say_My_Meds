@@ -24,6 +24,8 @@ class MedicationApiModel {
   }
 }
 
+// lib/app/views/screens/medications/controler/model/medication_api_model.dart
+
 class Results {
   int? id;
   String? originalImage;
@@ -67,92 +69,203 @@ class Results {
     this.additionalNotes,
   });
 
+  // 🔍 সব ভাষার ফিল্ড খুঁজে বের করার হেলপার
+  String? _findField(Map<String, dynamic> json, List<String> possibleKeys) {
+    for (var key in possibleKeys) {
+      if (json.containsKey(key) && json[key] != null && json[key].toString().isNotEmpty) {
+        return json[key].toString();
+      }
+    }
+    return null;
+  }
+
   Results.fromJson(Map<String, dynamic> json) {
     id = json['id'];
-    originalImage = json['original_image'];
-    genericName = json['generic_name'];
-    brandName = json['brand_name'];
-    manufacturer = json['manufacturer'];
-    drugClass = json['drug_class'];
-    uses = json['uses'];
-    totPills = json['tot_pills'];
-    dosageInformation = json['dosage_information'] != null
-        ? new DosageInformation.fromJson(json['dosage_information'])
-        : null;
-    howToTake = json['how_to_take'];
-    sideEffects = json['side_effects'] != null
-        ? new SideEffects.fromJson(json['side_effects'])
-        : null;
-    warnings = json['warnings'];
-    storageInstructions = json['storage_instructions'];
-    interactions = json['interactions'];
+
+    // 🌍 ট্রান্সলেটেড ফিল্ড খুঁজে বের করা
+    originalImage = _findField(json, [
+      'original_image', 'imagen_original', 'image_originale',
+      'imagem_original', 'imaj_orijinal', 'исходное_изображение',
+      '原始图像'
+    ]);
+
+    genericName = _findField(json, [
+      'generic_name', 'nombre_generico', 'nom_generique',
+      'nome_generico', 'non_jenerik', 'генерическое_название',
+      '通用名', 'genericName'
+    ]);
+
+    brandName = _findField(json, [
+      'brand_name', 'nombre_marca', 'nom_marque',
+      'nome_marca', 'non_mak', 'торговое_название',
+      '品牌名称', 'brandName'
+    ]);
+
+    manufacturer = _findField(json, [
+      'manufacturer', 'fabricante', 'fabricant',
+      'fabricante', 'fabrikant', 'производитель',
+      '制造商'
+    ]);
+
+    drugClass = _findField(json, [
+      'drug_class', 'clase_medicamento', 'classe_medicament',
+      'classe_medicamento', 'klas_medikaman', 'класс_препарата',
+      '药物类别'
+    ]);
+
+    uses = _findField(json, [
+      'uses', 'usos', 'utilisations',
+      'usos', 'itilizasyon', 'применение',
+      '用途'
+    ]);
+
+    totPills = _findField(json, [
+      'tot_pills', 'total_pastillas', 'total_comprimes',
+      'total_pilulas', 'total_gelil', 'всего_таблеток',
+      '总药片'
+    ]);
+
+    howToTake = _findField(json, [
+      'how_to_take', 'como_tomar', 'comment_prendre',
+      'como_tomar', 'kijan_pou_pran', 'как_принимать',
+      '如何服用'
+    ]);
+
+    warnings = _findField(json, [
+      'warnings', 'advertencias', 'avertissements',
+      'avisos', 'avis', 'предупреждения',
+      '警告'
+    ]);
+
+    storageInstructions = _findField(json, [
+      'storage_instructions', 'instrucciones_almacenamiento', 'instructions_stockage',
+      'instrucoes_armazenamento', 'enstriksyon_stokaj', 'инструкции_хранению',
+      '存储说明'
+    ]);
+
+    interactions = _findField(json, [
+      'interactions', 'interacciones', 'interactions',
+      'interacoes', 'entèraksyon', 'взаимодействия',
+      '相互作用'
+    ]);
+
+    // Dosage Information
+    if (json['dosage_information'] != null) {
+      dosageInformation = DosageInformation.fromJson(json['dosage_information']);
+    } else if (json['informacion_dosificacion'] != null) {
+      dosageInformation = DosageInformation.fromJson(json['informacion_dosificacion']);
+    } else if (json['information_dosage'] != null) {
+      dosageInformation = DosageInformation.fromJson(json['information_dosage']);
+    } else if (json['informacao_dosagem'] != null) {
+      dosageInformation = DosageInformation.fromJson(json['informacao_dosagem']);
+    } else if (json['enfomason_dosaj'] != null) {
+      dosageInformation = DosageInformation.fromJson(json['enfomason_dosaj']);
+    } else if (json['информация_дозировки'] != null) {
+      dosageInformation = DosageInformation.fromJson(json['информация_дозировки']);
+    } else if (json['给药信息'] != null) {
+      dosageInformation = DosageInformation.fromJson(json['给药信息']);
+    }
+
+    // Side Effects
+    if (json['side_effects'] != null) {
+      sideEffects = SideEffects.fromJson(json['side_effects']);
+    } else if (json['efectos_secundarios'] != null) {
+      sideEffects = SideEffects.fromJson(json['efectos_secundarios']);
+    } else if (json['effets_secondaires'] != null) {
+      sideEffects = SideEffects.fromJson(json['effets_secondaires']);
+    } else if (json['efeitos_colaterais'] != null) {
+      sideEffects = SideEffects.fromJson(json['efeitos_colaterais']);
+    } else if (json['efet_segondè'] != null) {
+      sideEffects = SideEffects.fromJson(json['efet_segondè']);
+    } else if (json['побочные_эффекты'] != null) {
+      sideEffects = SideEffects.fromJson(json['побочные_эффекты']);
+    } else if (json['副作用'] != null) {
+      sideEffects = SideEffects.fromJson(json['副作用']);
+    }
+
     aiAdditionalNotes = json['ai_additional_notes'];
     isActive = json['is_active'];
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
+
     if (json['additional_notes'] != null) {
       additionalNotes = <AdditionalNotes>[];
       json['additional_notes'].forEach((v) {
-        additionalNotes!.add(new AdditionalNotes.fromJson(v));
+        additionalNotes!.add(AdditionalNotes.fromJson(v));
       });
     }
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['id'] = this.id;
-    data['original_image'] = this.originalImage;
-    data['generic_name'] = this.genericName;
-    data['brand_name'] = this.brandName;
-    data['manufacturer'] = this.manufacturer;
-    data['drug_class'] = this.drugClass;
-    data['uses'] = this.uses;
-    data['tot_pills'] = this.totPills;
-    if (this.dosageInformation != null) {
-      data['dosage_information'] = this.dosageInformation!.toJson();
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['id'] = id;
+    data['original_image'] = originalImage;
+    data['generic_name'] = genericName;
+    data['brand_name'] = brandName;
+    data['manufacturer'] = manufacturer;
+    data['drug_class'] = drugClass;
+    data['uses'] = uses;
+    data['tot_pills'] = totPills;
+    if (dosageInformation != null) {
+      data['dosage_information'] = dosageInformation!.toJson();
     }
-    data['how_to_take'] = this.howToTake;
-    if (this.sideEffects != null) {
-      data['side_effects'] = this.sideEffects!.toJson();
+    data['how_to_take'] = howToTake;
+    if (sideEffects != null) {
+      data['side_effects'] = sideEffects!.toJson();
     }
-    data['warnings'] = this.warnings;
-    data['storage_instructions'] = this.storageInstructions;
-    data['interactions'] = this.interactions;
-    data['ai_additional_notes'] = this.aiAdditionalNotes;
-    data['is_active'] = this.isActive;
-    data['created_at'] = this.createdAt;
-    data['updated_at'] = this.updatedAt;
-    if (this.additionalNotes != null) {
-      data['additional_notes'] = this.additionalNotes!
-          .map((v) => v.toJson())
-          .toList();
+    data['warnings'] = warnings;
+    data['storage_instructions'] = storageInstructions;
+    data['interactions'] = interactions;
+    data['ai_additional_notes'] = aiAdditionalNotes;
+    data['is_active'] = isActive;
+    data['created_at'] = createdAt;
+    data['updated_at'] = updatedAt;
+    if (additionalNotes != null) {
+      data['additional_notes'] = additionalNotes!.map((v) => v.toJson()).toList();
     }
     return data;
   }
 }
 
+// DosageInformation and SideEffects classes also need translation support
 class DosageInformation {
   String? adultsDosage;
   String? childrenDosage;
   String? elderlyDosage;
 
-  DosageInformation({
-    this.adultsDosage,
-    this.childrenDosage,
-    this.elderlyDosage,
-  });
+  DosageInformation({this.adultsDosage, this.childrenDosage, this.elderlyDosage});
 
   DosageInformation.fromJson(Map<String, dynamic> json) {
-    adultsDosage = json['adults_dosage'];
-    childrenDosage = json['children_dosage'];
-    elderlyDosage = json['elderly_dosage'];
+    adultsDosage = json['adults_dosage'] ??
+        json['dosificacion_adultos'] ??
+        json['dosage_adultes'] ??
+        json['dosagem_adultos'] ??
+        json['dosaj_granmoun'] ??
+        json['дозировка_взрослых'] ??
+        json['成人用量'];
+
+    childrenDosage = json['children_dosage'] ??
+        json['dosificacion_ninos'] ??
+        json['dosage_enfants'] ??
+        json['dosagem_criancas'] ??
+        json['dosaj_timoun'] ??
+        json['дозировка_детей'] ??
+        json['儿童用量'];
+
+    elderlyDosage = json['elderly_dosage'] ??
+        json['dosificacion_ancianos'] ??
+        json['dosage_personnes_agees'] ??
+        json['dosagem_idosos'] ??
+        json['dosaj_moun_vye'] ??
+        json['дозировка_пожилых'] ??
+        json['老年人用量'];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['adults_dosage'] = this.adultsDosage;
-    data['children_dosage'] = this.childrenDosage;
-    data['elderly_dosage'] = this.elderlyDosage;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['adults_dosage'] = adultsDosage;
+    data['children_dosage'] = childrenDosage;
+    data['elderly_dosage'] = elderlyDosage;
     return data;
   }
 }
@@ -164,17 +277,31 @@ class SideEffects {
   SideEffects({this.common, this.serious});
 
   SideEffects.fromJson(Map<String, dynamic> json) {
-    common = json['common'];
-    serious = json['serious'];
+    common = json['common'] ??
+        json['comunes'] ??
+        json['courants'] ??
+        json['comuns'] ??
+        json['ordinè'] ??
+        json['частые'] ??
+        json['常见'];
+
+    serious = json['serious'] ??
+        json['graves'] ??
+        json['graves'] ??
+        json['graves'] ??
+        json['grav'] ??
+        json['серьезные'] ??
+        json['严重'];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
-    data['common'] = this.common;
-    data['serious'] = this.serious;
+    final Map<String, dynamic> data = <String, dynamic>{};
+    data['common'] = common;
+    data['serious'] = serious;
     return data;
   }
 }
+
 
 class AdditionalNotes {
   int? id;

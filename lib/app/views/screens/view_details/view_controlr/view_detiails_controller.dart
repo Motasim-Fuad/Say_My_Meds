@@ -194,11 +194,9 @@ class ViewDetailsController extends GetxController {
     print('📸 Picking image from camera...');
     try {
       loadingMessage.value = 'Opening camera...'.tr;
+      // ✅ লিমিটেশন সরানো হয়েছে - পুরো রেজোলিউশনে ইমেজ নেওয়া হবে
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.camera,
-        maxWidth: 2000,     // ✅ Limit width to reduce size
-        maxHeight: 2000,    // ✅ Limit height to reduce size
-        imageQuality: 80,   // ✅ Already compressing from picker
       );
       if (pickedFile != null) {
         selectedImage.value = File(pickedFile.path);
@@ -219,11 +217,9 @@ class ViewDetailsController extends GetxController {
     print('🖼️ Picking image from gallery...');
     try {
       loadingMessage.value = 'Opening gallery...'.tr;
+      // ✅ লিমিটেশন সরানো হয়েছে - পুরো রেজোলিউশনে ইমেজ নেওয়া হবে
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 2000,     // ✅ Limit width to reduce size
-        maxHeight: 2000,    // ✅ Limit height to reduce size
-        imageQuality: 80,   // ✅ Already compressing from picker
       );
       if (pickedFile != null) {
         selectedImage.value = File(pickedFile.path);
@@ -255,11 +251,9 @@ class ViewDetailsController extends GetxController {
       loadingMessage.value = 'Processing image...'.tr;
       print('🚀 Starting image upload for AI analysis...');
 
-      // ✅ COMPRESS IMAGE BEFORE UPLOAD
+      // কম্প্রেস
       final originalFile = selectedImage.value!;
       final compressedFile = await _compressImage(originalFile);
-
-      // Update selected image with compressed version
       selectedImage.value = compressedFile;
 
       final token = await _getToken();
@@ -273,7 +267,6 @@ class ViewDetailsController extends GetxController {
 
       final cleanedToken = token.trim().replaceAll('"', '');
       final apiLang = selectedLanguage.value;
-
       final uri = Uri.parse('${ApiConstants.aiAnalysis}?lang=$apiLang');
       print('🌐 API URL: $uri');
 
@@ -281,8 +274,6 @@ class ViewDetailsController extends GetxController {
 
       final request = http.MultipartRequest('POST', uri);
       request.headers.addAll({'Authorization': 'Bearer $cleanedToken'});
-
-      // ✅ Use compressed file for upload
       request.files.add(
         await http.MultipartFile.fromPath('image', compressedFile.path),
       );
@@ -292,7 +283,11 @@ class ViewDetailsController extends GetxController {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
+      // ✅ সর্বদা কনসোলে সম্পূর্ণ রেসপন্স প্রিন্ট করি
       print('📥 Response status code: ${response.statusCode}');
+      print('📥 Full Response Body:');
+      print(response.body);
+      print('─────────────────────────────────────');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonData = json.decode(response.body);
@@ -319,47 +314,60 @@ class ViewDetailsController extends GetxController {
             _showError('Could not detect medication in image'.tr, context);
           }
         }
-      } else if (response.statusCode == 413) {
-        // ✅ Specific handling for 413 error
-        print('❌ Image too large (413) - Even after compression');
-        loadingMessage.value = '';
-        _showError('Image is still too large. Please use a smaller image.'.tr, context);
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        print('❌ Unauthorized - Status: ${response.statusCode}');
-        loadingMessage.value = '';
-        _showError('Session expired. Please login again.'.tr, context);
-      } else if (response.statusCode == 400) {
-        print('❌ Bad Request - Status: ${response.statusCode}');
-        loadingMessage.value = '';
-        _showError('Invalid image or format not supported'.tr, context);
-      } else if (response.statusCode == 500) {
-        print('❌ Server Error - Status: ${response.statusCode}');
-        loadingMessage.value = '';
-        _showError('Server error. Please try again later.'.tr, context);
       } else {
-        print('❌ Upload failed with status: ${response.statusCode}');
+        // ❌ এরর হ্যান্ডলিং - সার্ভার থেকে মেসেজ বের করি
+        String errorMessage = 'Failed to upload image';
+        try {
+          final errorJson = json.decode(response.body);
+          // সম্ভাব্য কীগুলি: 'error', 'message', 'detail', 'non_field_errors'
+          if (errorJson is Map<String, dynamic>) {
+            if (errorJson.containsKey('error')) {
+              errorMessage = errorJson['error'].toString();
+            } else if (errorJson.containsKey('message')) {
+              errorMessage = errorJson['message'].toString();
+            } else if (errorJson.containsKey('detail')) {
+              errorMessage = errorJson['detail'].toString();
+            } else if (errorJson.containsKey('non_field_errors')) {
+              errorMessage = errorJson['non_field_errors'].toString();
+            } else {
+              // যদি কোনো পরিচিত কী না থাকে, পুরো JSON দেখাই
+              errorMessage = errorJson.toString();
+            }
+          } else {
+            // যদি JSON না হয়, তাহলে raw body
+            errorMessage = response.body;
+          }
+        } catch (e) {
+          // JSON পার্স করতে না পারলে raw body ব্যবহার করি
+          errorMessage = response.body.isNotEmpty ? response.body : 'Unknown error occurred';
+        }
+
+        print('❌ Upload failed: $errorMessage');
         loadingMessage.value = '';
-        _showError('Failed to upload image (${response.statusCode})', context);
+
+        // ✅ স্ন্যাকবারে ডিটেইলড মেসেজ দেখাই
+        _showError(errorMessage, context);
+
+        // ⚠️ অতিরিক্ত: যদি ৪২৯ হয়, তবুও সার্ভারের মেসেজই দেখাবে
       }
     } catch (e) {
       print('❌ Upload error: $e');
       loadingMessage.value = '';
 
+      String errorMsg = 'Something went wrong. Please try again.'.tr;
       if (e.toString().contains('SocketException') ||
           e.toString().contains('Connection refused')) {
-        _showError('No internet connection. Please check your network.'.tr, context);
+        errorMsg = 'No internet connection. Please check your network.'.tr;
       } else if (e.toString().contains('Timeout')) {
-        _showError('Request timed out. Please try again.'.tr, context);
-      } else {
-        _showError('Something went wrong. Please try again.'.tr, context);
+        errorMsg = 'Request timed out. Please try again.'.tr;
       }
+      _showError(errorMsg, context);
     } finally {
       isLoading.value = false;
       loadingMessage.value = '';
       print('🏁 Upload process completed');
     }
   }
-
   // ==================== SANITIZE API RESPONSE ====================
 
   Map<String, dynamic> _sanitizeApiResponse(Map<String, dynamic> data) {
@@ -476,14 +484,12 @@ class ViewDetailsController extends GetxController {
 
         final cleanedToken = token.trim().replaceAll('"', '');
         final langCode = selectedLanguage.value;
-
         final uri = Uri.parse('${ApiConstants.aiAnalysis}?lang=$langCode');
 
         try {
           final request = http.MultipartRequest('POST', uri);
           request.headers.addAll({'Authorization': 'Bearer $cleanedToken'});
 
-          // ✅ Use compressed image for re-analysis
           final imageFile = selectedImage.value!;
           final compressedFile = await _compressImage(imageFile);
           request.files.add(
@@ -493,7 +499,11 @@ class ViewDetailsController extends GetxController {
           final streamedResponse = await request.send();
           final response = await http.Response.fromStream(streamedResponse);
 
+          // ✅ কনসোলে সম্পূর্ণ রেসপন্স প্রিন্ট
           print('📥 Re-analysis response status: ${response.statusCode}');
+          print('📥 Re-analysis Full Response:');
+          print(response.body);
+          print('─────────────────────────────────────');
 
           if (response.statusCode == 200 || response.statusCode == 201) {
             final decoded = jsonDecode(response.body);
@@ -507,16 +517,35 @@ class ViewDetailsController extends GetxController {
                 print('⚠️ Re-analysis response missing ai_analysis data');
               }
             }
-          } else if (response.statusCode == 500) {
-            print('⚠️ Server returned 500 during re-analysis, keeping existing data');
           } else {
-            print('❌ Re-analysis failed with status: ${response.statusCode}');
-            if (response.statusCode != 500) {
-              _showError('Failed to re-analyze in $langCode', context);
+            // ❌ এরর হ্যান্ডলিং
+            String errorMessage = 'Failed to re-analyze image';
+            try {
+              final errorJson = jsonDecode(response.body);
+              if (errorJson is Map<String, dynamic>) {
+                if (errorJson.containsKey('error')) {
+                  errorMessage = errorJson['error'].toString();
+                } else if (errorJson.containsKey('message')) {
+                  errorMessage = errorJson['message'].toString();
+                } else if (errorJson.containsKey('detail')) {
+                  errorMessage = errorJson['detail'].toString();
+                } else if (errorJson.containsKey('non_field_errors')) {
+                  errorMessage = errorJson['non_field_errors'].toString();
+                } else {
+                  errorMessage = errorJson.toString();
+                }
+              } else {
+                errorMessage = response.body.isNotEmpty ? response.body : 'Unknown error';
+              }
+            } catch (e) {
+              errorMessage = response.body.isNotEmpty ? response.body : 'Unknown error';
             }
+            print('❌ Re-analysis failed: $errorMessage');
+            _showError(errorMessage, context);
           }
         } catch (e) {
           print('❌ Re-analysis request error: $e');
+          _showError('Re-analysis failed: $e', context);
         }
       }
 

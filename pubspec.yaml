@@ -46,7 +46,7 @@ dependencies:
   google_fonts: ^8.1.0
 
   #  image sca ne
-  mobile_scanner: 5.2.3
+  mobile_scanner: ^7.0.1
   flutter_image_compress: ^2.4.0
   camera: ^0.10.6
   permission_handler_ohos: ^0.0.6
